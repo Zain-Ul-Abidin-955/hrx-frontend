@@ -215,7 +215,7 @@ const Attendance: React.FC = () => {
         <Col xs={24} lg={16}>
           <Card
             title={
-              <span className="text-lg font-semibold">Today's Attendance</span>
+              <span className="text-lg font-semibold">Today&apos;s Attendance</span>
             }
           >
             <Table

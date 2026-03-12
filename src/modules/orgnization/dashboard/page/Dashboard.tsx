@@ -204,7 +204,7 @@ const Dashboard: React.FC = () => {
           Welcome back, HR Manager! 👋
         </h1>
         <p className="text-blue-100 text-lg">
-          Here's what's happening with your workforce today
+          Here&apos;s what&apos;s happening with your workforce today
         </p>
       </div>
 

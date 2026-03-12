@@ -20,11 +20,12 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
   const [role, setRole] = useState<AppRole>("employee");
   const sidebarWidth = sidebarCollapsed ? 80 : 250;
 
-  // Role from localStorage (managed on login)
+  // Role from localStorage (managed on login) — defer setState to avoid synchronous update in effect
   useEffect(() => {
     const stored = (localStorage.getItem("userRole") || "employee").toLowerCase();
     if (stored === "admin" || stored === "organization" || stored === "employee") {
-      setRole(stored);
+      const id = queueMicrotask(() => setRole(stored));
+      return () => queueMicrotask(() => clearTimeout(id as unknown as number));
     }
   }, []);
 
