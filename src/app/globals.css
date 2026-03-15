@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
-:root {
-  --bgColor: #f5f5f5;
+
+@theme {
+  --color-primaryColor: #001F3F;
+  --color-blackColor: #1E1E1E;
+  --color-secondaryTextColor: #2B2B2B;
+  --color-secondaryColor: #FF5B5B;
+  --color-grayColor: #464255;
+  --color-darkblack: #000000;
+  --color-whiteColor: #FFFFFF;
+  --color-offWhiteColor: #f9f9f9;
+  --color-darkGrayColor: #969BA0;
+  --color-grayLightColor: #B9BBBD;
+  --color-halfGrayColor: #1E1E1E80;
+  --color-blueColor: #2D9CDB;
+
 }
+
+@tailwind utilities;

@@ -63,7 +63,7 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-white to-gray-50">
+    <div className="min-h-screen mx-auto bg-linear-to-b from-white to-gray-50">
       {/* Navbar */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,7 +87,7 @@ const LandingPage: React.FC = () => {
                 type="primary"
                 size="large"
                 onClick={() => router.push("/auth/signup")}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="!bg-primaryColor !hover:bg-primaryColor/80"
               >
                 Get Started
               </Button>
@@ -118,24 +118,6 @@ const LandingPage: React.FC = () => {
             Automate recruitment, manage attendance, and empower your team with
             intelligent insights.
           </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => router.push("/auth/signup")}
-              className="bg-blue-600 hover:bg-blue-700 h-14 px-8 text-lg font-medium"
-            >
-              Start Free Trial
-            </Button>
-            <Button
-              size="large"
-              onClick={() => router.push("/auth/login")}
-              className="h-14 px-8 text-lg font-medium"
-            >
-              Watch Demo
-            </Button>
-          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
@@ -224,7 +206,7 @@ const LandingPage: React.FC = () => {
                   onClick={() => router.push("/auth/signup")}
                   className="bg-blue-600 hover:bg-blue-700 h-14 text-lg font-medium"
                 >
-                  Sign Up Free
+                  Sign Up
                 </Button>
                 <Button
                   size="large"
@@ -235,9 +217,6 @@ const LandingPage: React.FC = () => {
                   Login to Your Account
                 </Button>
               </div>
-              <p className="text-center text-gray-500 mt-4">
-                No credit card required • 14-day free trial
-              </p>
             </div>
           </div>
         </div>

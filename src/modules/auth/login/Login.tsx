@@ -73,7 +73,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-md px-8 py-10">
+    <div className="w-[70%] mx-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
         <p className="text-gray-600">Sign in to your account</p>
@@ -122,7 +122,7 @@ const Login: React.FC = () => {
         <Form.Item name="remember" valuePropName="checked" className="mb-4">
           <div className="flex items-center justify-between">
             <Checkbox className="text-gray-600">Remember me</Checkbox>
-            <a href="#" className="text-blue-600 hover:text-blue-700 text-sm">
+            <a href="#" className="!text-primaryColor hover:text-primaryColor/80 text-sm">
               Forgot password?
             </a>
           </div>
@@ -134,7 +134,7 @@ const Login: React.FC = () => {
             htmlType="submit"
             size="large"
             loading={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 border-0 rounded-lg h-12 text-base font-medium"
+            className="w-full !bg-primaryColor border-0 rounded-lg h-12  font-medium"
           >
             {loading ? "Logging in..." : "Login"}
           </Button>

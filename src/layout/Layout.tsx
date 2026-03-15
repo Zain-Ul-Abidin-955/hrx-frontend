@@ -111,7 +111,7 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Content Area with top padding for fixed header */}
         <Content
-          className="bg-halfWhite"
+          className="bg-offWhiteColor"
           style={{
             marginTop: "64px", // Height of fixed header
             minHeight: "calc(100vh - 64px)",
