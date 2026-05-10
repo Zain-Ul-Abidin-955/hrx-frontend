@@ -17,6 +17,7 @@ import {
 } from "@ant-design/icons";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
+import { clearAuthCookies } from "@/lib/cookies-client";
 
 interface SidebarItem {
   name: string;
@@ -26,27 +27,27 @@ interface SidebarItem {
 }
 
 const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
-  admin: [
+  superadmin: [
     {
       name: "Dashboard",
       icon: <DashboardOutlined />,
-      link: "/admin/dashboard",
-      paths: ["/admin/dashboard", "/admin"],
+      link: "/superadmin/dashboard",
+      paths: ["/superadmin/dashboard", "/superadmin"],
     },
     {
       name: "Organizations",
       icon: <BankOutlined />,
-      link: "/admin/organization",
-      paths: ["/admin/organization"],
+      link: "/superadmin/organization",
+      paths: ["/superadmin/organization"],
     },
     {
       name: "Settings",
       icon: <SettingOutlined />,
-      link: "/admin/settings",
-      paths: ["/admin/settings"],
+      link: "/superadmin/settings",
+      paths: ["/superadmin/settings"],
     },
   ],
-  organization: [
+  admin: [
     {
       name: "Dashboard",
       icon: <DashboardOutlined />,
@@ -90,26 +91,6 @@ const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
       paths: ["/orgnization/settings"],
     },
   ],
-  employee: [
-    {
-      name: "Dashboard",
-      icon: <DashboardOutlined />,
-      link: "/employee/dashboard",
-      paths: ["/employee/dashboard", "/employee"],
-    },
-    {
-      name: "My Profile",
-      icon: <UserOutlined />,
-      link: "/employee/profile",
-      paths: ["/employee/profile"],
-    },
-    {
-      name: "Settings",
-      icon: <SettingOutlined />,
-      link: "/employee/settings",
-      paths: ["/employee/settings"],
-    },
-  ],
 };
 
 interface SidebarProps {
@@ -137,13 +118,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogout = () => {
-    // Clear all localStorage data
-    localStorage.clear();
-    // Close modal
+    clearAuthCookies();
     setIsLogoutModalOpen(false);
-
-    // Navigate to home/login page
-    router.push("/");
+    router.push("/login");
   };
 
   const handleCancelLogout = () => {

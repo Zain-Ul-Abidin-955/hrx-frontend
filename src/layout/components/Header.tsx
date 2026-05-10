@@ -13,11 +13,17 @@ import {
 import { useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
+import {
+  getClientCookie,
+  AUTH_COOKIE_EMAIL,
+  AUTH_COOKIE_ROLE,
+  clearAuthCookies,
+} from "@/lib/cookies-client";
+import { normalizeRoleCookie } from "@/lib/auth-cookies";
 
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
-  admin: "/admin/settings",
-  organization: "/orgnization/settings",
-  employee: "/employee/settings",
+  superadmin: "/superadmin/settings",
+  admin: "/orgnization/settings",
 };
 
 interface HeaderProps {
@@ -38,11 +44,12 @@ const Header: React.FC<HeaderProps> = ({
   const [userRole, setUserRole] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
-  // Get user info from localStorage on client side only
+  // Email / role from cookies (auth); fallback for display only
   React.useEffect(() => {
     setIsMounted(true);
-    setUserEmail(localStorage.getItem("userEmail") || "user@example.com");
-    setUserRole(localStorage.getItem("userRole") || "employee");
+    setUserEmail(getClientCookie(AUTH_COOKIE_EMAIL) || "user@example.com");
+    const storedRole = normalizeRoleCookie(getClientCookie(AUTH_COOKIE_ROLE) ?? undefined) ?? "admin";
+    setUserRole(storedRole);
   }, []);
 
   // Prevent hydration mismatch by not rendering until mounted
@@ -77,13 +84,10 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const handleLogout = () => {
-    // Clear all localStorage data
-    localStorage.clear();
-    // Close modal
+    clearAuthCookies();
     setIsLogoutModalOpen(false);
     
-    // Navigate to home page
-    router.push("/");
+    router.push("/login");
   };
 
   const handleCancelLogout = () => {
