@@ -3,14 +3,22 @@ import { Layout } from "antd";
 import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import { getClientCookie, AUTH_COOKIE_ROLE } from "@/lib/cookies-client";
-import { normalizeRoleCookie } from "@/lib/auth-cookies";
 
 const { Content, Sider } = Layout;
 
 const MOBILE_BREAKPOINT = 768;
 
 export type AppRole = "superadmin" | "admin";
+
+function readRoleFromCookie(): AppRole {
+  if (typeof document === "undefined") return "admin";
+  const match = document.cookie.match(/(?:^|; )userRole=([^;]*)/);
+  const raw = match ? decodeURIComponent(match[1]) : "";
+  const s = raw.toLowerCase().trim();
+  if (s === "superadmin") return "superadmin";
+  if (s === "admin" || s === "organization" || s === "hr") return "admin";
+  return "admin";
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,11 +30,9 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
   const [role, setRole] = useState<AppRole>("admin");
   const sidebarWidth = sidebarCollapsed ? 80 : 250;
 
-  // Role from cookies (set on login) — defer setState to avoid synchronous update in effect
+  // Role from document.cookie (set on login)
   useEffect(() => {
-    const raw = getClientCookie(AUTH_COOKIE_ROLE);
-    const normalized = normalizeRoleCookie(raw ?? undefined) ?? "admin";
-    const normalizedRole: AppRole = normalized;
+    const normalizedRole = readRoleFromCookie();
 
     const id = queueMicrotask(() => setRole(normalizedRole));
     return () => queueMicrotask(() => clearTimeout(id as unknown as number));

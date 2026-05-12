@@ -4,8 +4,7 @@ import { Form, Input, Button, Checkbox, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { setAuthCookies } from "@/lib/cookies-client";
-import type { AppRoleCookie } from "@/lib/auth-cookies";
+import type { AppRole } from "@/layout/Layout";
 
 interface LoginFormValues {
   email: string;
@@ -16,11 +15,18 @@ interface LoginFormValues {
 const DUMMY_TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTYiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20ifQ.dummytoken";
 
+const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7;
+
+function setBrowserCookie(name: string, value: string, maxAgeSec = COOKIE_MAX_AGE_SEC): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSec}; SameSite=Lax`;
+}
+
 /** Demo accounts — Organization uses admin role + /orgnization routes; Super Admin uses superadmin + /superadmin routes. */
 const DUMMY_ACCOUNTS: ReadonlyArray<{
   email: string;
   password: string;
-  role: AppRoleCookie;
+  role: AppRole;
   label: string;
 }> = [
   {
@@ -61,11 +67,11 @@ const Login: React.FC = () => {
       return;
     }
 
-    setAuthCookies({
-      token: DUMMY_TOKEN,
-      role: match.role,
-      email: values.remember ? values.email.trim() : undefined,
-    });
+    setBrowserCookie("authToken", DUMMY_TOKEN);
+    setBrowserCookie("userRole", match.role);
+    if (values.remember) {
+      setBrowserCookie("userEmail", values.email.trim());
+    }
 
     setTimeout(() => {
       setLoading(false);

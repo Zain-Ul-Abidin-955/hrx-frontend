@@ -17,7 +17,13 @@ import {
 } from "@ant-design/icons";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
-import { clearAuthCookies } from "@/lib/cookies-client";
+
+function clearAuthCookies(): void {
+  if (typeof document === "undefined") return;
+  for (const name of ["authToken", "userRole", "userEmail"]) {
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+}
 
 interface SidebarItem {
   name: string;

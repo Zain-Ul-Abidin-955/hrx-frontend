@@ -13,13 +13,28 @@ import {
 import { useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
-import {
-  getClientCookie,
-  AUTH_COOKIE_EMAIL,
-  AUTH_COOKIE_ROLE,
-  clearAuthCookies,
-} from "@/lib/cookies-client";
-import { normalizeRoleCookie } from "@/lib/auth-cookies";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const parts = `; ${document.cookie}`.split(`; ${name}=`);
+  if (parts.length !== 2) return null;
+  const value = parts.pop()?.split(";").shift();
+  return value ? decodeURIComponent(value) : null;
+}
+
+function normalizeDisplayRole(raw: string | null): AppRole {
+  const s = (raw ?? "").toLowerCase().trim();
+  if (s === "superadmin") return "superadmin";
+  if (s === "admin" || s === "organization" || s === "hr") return "admin";
+  return "admin";
+}
+
+function clearAuthCookies(): void {
+  if (typeof document === "undefined") return;
+  for (const name of ["authToken", "userRole", "userEmail"]) {
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+}
 
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
   superadmin: "/superadmin/settings",
@@ -44,12 +59,11 @@ const Header: React.FC<HeaderProps> = ({
   const [userRole, setUserRole] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
-  // Email / role from cookies (auth); fallback for display only
+  // Email / role from document.cookie (set on login)
   React.useEffect(() => {
     setIsMounted(true);
-    setUserEmail(getClientCookie(AUTH_COOKIE_EMAIL) || "user@example.com");
-    const storedRole = normalizeRoleCookie(getClientCookie(AUTH_COOKIE_ROLE) ?? undefined) ?? "admin";
-    setUserRole(storedRole);
+    setUserEmail(getCookie("userEmail") || "user@example.com");
+    setUserRole(normalizeDisplayRole(getCookie("userRole")));
   }, []);
 
   // Prevent hydration mismatch by not rendering until mounted
