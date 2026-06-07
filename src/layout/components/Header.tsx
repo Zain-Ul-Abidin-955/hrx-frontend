@@ -31,7 +31,7 @@ function normalizeDisplayRole(raw: string | null): AppRole {
 
 function clearAuthCookies(): void {
   if (typeof document === "undefined") return;
-  for (const name of ["authToken", "userRole", "userEmail"]) {
+  for (const name of ["userRole", "userEmail"]) {
     document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
   }
 }

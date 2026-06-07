@@ -13,17 +13,10 @@ import {
   SettingOutlined,
   LogoutOutlined,
   BankOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
 
-function clearAuthCookies(): void {
-  if (typeof document === "undefined") return;
-  for (const name of ["authToken", "userRole", "userEmail"]) {
-    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
-  }
-}
 
 interface SidebarItem {
   name: string;
@@ -31,6 +24,7 @@ interface SidebarItem {
   link: string;
   paths: string[];
 }
+
 
 const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
   superadmin: [
@@ -106,11 +100,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-  role,
   isCollapsed = false,
   onNavigate,
 }) => {
-  const sidebarItems = SIDEBAR_BY_ROLE[role];
+  const role = localStorage.getItem("role");
+  const sidebarItems = SIDEBAR_BY_ROLE[role as AppRole];
   const pathname = usePathname();
   const router = useRouter();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -124,7 +118,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogout = () => {
-    clearAuthCookies();
     setIsLogoutModalOpen(false);
     router.push("/login");
   };
@@ -135,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const linkContent = (item: SidebarItem) => (
     <>
-      <span className="text-xl flex-shrink-0">{item.icon}</span>
+      <span className="text-xl shrink-0">{item.icon}</span>
       {!isCollapsed && <span className="font-medium text-sm">{item.name}</span>}
     </>
   );
@@ -144,14 +137,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div className="h-full bg-white border-r border-gray-200 w-full flex flex-col">
       {/* Logo Section */}
       <div
-        className={`text-center border-b border-gray-200 flex flex-col items-center justify-center ${
-          isCollapsed ? "py-6 px-2" : "py-6 px-4"
-        }`}
+        className={`text-center border-b border-gray-200 flex flex-col items-center justify-center ${isCollapsed ? "py-6 px-2" : "py-6 px-4"
+          }`}
       >
         <div
           className={`flex items-center ${isCollapsed ? "justify-center" : "justify-center space-x-2"}`}
         >
-          <RobotOutlined className="text-3xl text-blue-600 flex-shrink-0" />
+          <RobotOutlined className="text-3xl text-blue-600 shrink-0" />
           {!isCollapsed && (
             <>
               <span className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -179,15 +171,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Link
                   href={item.link}
                   onClick={onNavigate}
-                  className={`flex items-center rounded-lg transition-all duration-200 ${
-                    isCollapsed
+                  className={`flex items-center rounded-lg transition-all duration-200 ${isCollapsed
                       ? "justify-center px-3 py-3"
                       : "space-x-3 px-4 py-3"
-                  } ${
-                    isActiveRoute(item)
+                    } ${isActiveRoute(item)
                       ? "!bg-primaryColor !text-white shadow-md"
                       : "!text-gray-700 hover:!bg-gray-100 hover:!text-primaryColor"
-                  }`}
+                    }`}
                 >
                   {linkContent(item)}
                 </Link>
@@ -209,11 +199,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <button
             onClick={showLogoutModal}
-            className={`w-full flex items-center rounded-lg text-gray-600 hover:bg-gray-100 transition-all duration-200 ${
-              isCollapsed ? "justify-center px-3 py-3" : "space-x-3 px-4 py-3"
-            }`}
+            className={`w-full flex items-center rounded-lg text-gray-600 hover:bg-gray-100 transition-all duration-200 ${isCollapsed ? "justify-center px-3 py-3" : "space-x-3 px-4 py-3"
+              }`}
           >
-            <LogoutOutlined className="text-xl flex-shrink-0" />
+            <LogoutOutlined className="text-xl shrink-0" />
             {!isCollapsed && (
               <span className="font-medium text-sm">Logout</span>
             )}

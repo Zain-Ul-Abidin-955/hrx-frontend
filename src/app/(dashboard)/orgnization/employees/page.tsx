@@ -1,23 +1,33 @@
 "use client";
-import React, { useState } from "react";
-import { Card, Table, Button, Avatar, Tag, Input, Space } from "antd";
+import React from "react";
+import { Card, Button, Avatar, Tag, Space } from "antd";
 import {
   UserOutlined,
-  SearchOutlined,
   PlusOutlined,
   MailOutlined,
   PhoneOutlined,
 } from "@ant-design/icons";
+import MyTable from "@/components/table/MyTable";
+
+interface EmployeeRecord {
+  key: string;
+  name: string;
+  employeeId: string;
+  department: string;
+  position: string;
+  email: string;
+  phone: string;
+  status: string;
+  avatar?: string;
+}
 
 const Employees: React.FC = () => {
-  const [searchText, setSearchText] = useState("");
-
   const columns = [
     {
       title: "Employee",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: any) => (
+      render: (text: string, record: EmployeeRecord) => (
         <div className="flex items-center space-x-3">
           <Avatar size={40} icon={<UserOutlined />} src={record.avatar} className="!mr-2" />
           <div>
@@ -87,7 +97,7 @@ const Employees: React.FC = () => {
     },
   ];
 
-  const data = [
+  const data: EmployeeRecord[] = [
     {
       key: "1",
       name: "John Doe",
@@ -186,32 +196,23 @@ const Employees: React.FC = () => {
         </Card>
       </div>
 
-      {/* Employees Table */}
-      <Card
-        title={
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold">All Employees</span>
-            <Input
-              placeholder="Search employees..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="!w-[340px] !ml-4"
-            />
-          </div>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={data}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} employees`,
-          }}
-          scroll={{ x: 1200 }}
-        />
-      </Card>
+      <MyTable<EmployeeRecord>
+        title="All Employees"
+        searchPlaceholder="Search employees..."
+        columns={columns}
+        dataSource={data}
+        paginationConfig={{ pageSize: 3 }}
+        searchKeys={[
+          "name",
+          "employeeId",
+          "department",
+          "position",
+          "email",
+          "phone",
+          "status",
+        ]}
+        scroll={{ x: 1200 }}
+      />
     </div>
   );
 };
