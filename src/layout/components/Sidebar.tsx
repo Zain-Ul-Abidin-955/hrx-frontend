@@ -47,7 +47,7 @@ const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
       paths: ["/superadmin/settings"],
     },
   ],
-  admin: [
+  org_admin: [
     {
       name: "Dashboard",
       icon: <DashboardOutlined />,
@@ -100,11 +100,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
+  role,
   isCollapsed = false,
   onNavigate,
 }) => {
-  const role = localStorage.getItem("role");
-  const sidebarItems = SIDEBAR_BY_ROLE[role as AppRole];
+  const sidebarItems = SIDEBAR_BY_ROLE[role] ?? SIDEBAR_BY_ROLE.org_admin;
   const pathname = usePathname();
   const router = useRouter();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -172,8 +172,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   href={item.link}
                   onClick={onNavigate}
                   className={`flex items-center rounded-lg transition-all duration-200 ${isCollapsed
-                      ? "justify-center px-3 py-3"
-                      : "space-x-3 px-4 py-3"
+                    ? "justify-center px-3 py-3"
+                    : "space-x-3 px-4 py-3"
                     } ${isActiveRoute(item)
                       ? "!bg-primaryColor !text-white shadow-md"
                       : "!text-gray-700 hover:!bg-gray-100 hover:!text-primaryColor"

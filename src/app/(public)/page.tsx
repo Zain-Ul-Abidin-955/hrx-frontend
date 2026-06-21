@@ -121,11 +121,10 @@ const LandingPage: React.FC = () => {
               </Button>
             </div>
 
-            <LandingSignupForm />
+            <LandingSignupForm id="landing-signup" />
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-16 border-t border-grayLightColor/40">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-4xl font-bold text-primaryColor mb-2">
@@ -172,34 +171,54 @@ const LandingPage: React.FC = () => {
 
       {/* Benefits Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primaryColor">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-whiteColor">
-              <h2 className="text-4xl sm:text-5xl font-bold mb-6">
-                Why Choose HRX AI?
-              </h2>
-              <p className="text-xl text-whiteColor/80 mb-8">
-                Join thousands of companies that have transformed their HR
-                operations with our AI-powered platform
-              </p>
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-4xl sm:text-5xl font-bold text-whiteColor mb-4">
+            Why Choose HRX AI?
+          </h2>
+          <p className="text-xl text-whiteColor/80 mb-12 max-w-2xl mx-auto">
+            Join thousands of companies that have transformed their HR
+            operations with our AI-powered platform
+          </p>
 
-              <div className="space-y-4">
-                {[
-                  "Reduce hiring time by 60% with AI-powered screening",
-                  "Automate 80% of repetitive HR tasks",
-                  "Real-time workforce analytics and insights",
-                  "24/7 AI assistant for employee support",
-                  "Seamless integration with existing tools",
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <CheckCircleOutlined className="text-2xl text-blueColor mt-1" />
-                    <span className="text-lg text-whiteColor">{benefit}</span>
-                  </div>
-                ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left mb-12">
+            {[
+              "Reduce hiring time by 60% with AI-powered screening",
+              "Automate 80% of repetitive HR tasks",
+              "Real-time workforce analytics and insights",
+              "24/7 AI assistant for employee support",
+              "Seamless integration with existing tools",
+              "Secure, compliant, and scalable for any team size",
+            ].map((benefit, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 bg-whiteColor/10 rounded-xl p-5 border border-whiteColor/10"
+              >
+                <CheckCircleOutlined className="text-2xl text-blueColor mt-0.5 shrink-0" />
+                <span className="text-lg text-whiteColor">{benefit}</span>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <LandingSignupForm id="landing-signup-bottom" />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button
+              type="primary"
+              size="large"
+              onClick={() =>
+                document
+                  .getElementById("landing-signup")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
+            >
+              Get Started Free
+            </Button>
+            <Button
+              size="large"
+              onClick={() => router.push("/login")}
+              className="!border-whiteColor !text-whiteColor hover:!bg-whiteColor/10 h-12 px-8 font-medium"
+            >
+              Login to Your Account
+            </Button>
           </div>
         </div>
       </section>

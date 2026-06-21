@@ -7,7 +7,7 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   UserOutlined,
-  RobotOutlined,
+  // RobotOutlined,
 } from "@ant-design/icons";
 
 const Attendance: React.FC = () => {

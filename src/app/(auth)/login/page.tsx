@@ -41,7 +41,7 @@ const Login: React.FC = () => {
 
           if (role === "superadmin") {
             router.push("/superadmin/dashboard");
-          } else if (role === "admin" || role === "hr" || role === "employee") {
+          } else if (role === "org_admin" || role === "org_hr" || role === "org_employee") {
             router.push("/orgnization/dashboard");
           } else {
             router.push("/login");

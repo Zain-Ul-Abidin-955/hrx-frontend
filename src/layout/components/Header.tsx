@@ -25,8 +25,8 @@ function getCookie(name: string): string | null {
 function normalizeDisplayRole(raw: string | null): AppRole {
   const s = (raw ?? "").toLowerCase().trim();
   if (s === "superadmin") return "superadmin";
-  if (s === "admin" || s === "organization" || s === "hr") return "admin";
-  return "admin";
+  if (s === "org_admin" || s === "org_hr" || s === "org_employee") return "org_admin";
+  return "org_admin";
 }
 
 function clearAuthCookies(): void {
@@ -38,7 +38,7 @@ function clearAuthCookies(): void {
 
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
   superadmin: "/superadmin/settings",
-  admin: "/orgnization/settings",
+  org_admin: "/orgnization/settings",
 };
 
 interface HeaderProps {

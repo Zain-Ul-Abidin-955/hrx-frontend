@@ -8,16 +8,21 @@ const { Content, Sider } = Layout;
 
 const MOBILE_BREAKPOINT = 768;
 
-export type AppRole = "superadmin" | "admin";
+export type AppRole = "superadmin" | "org_admin";
 
-function readRoleFromCookie(): AppRole {
-  if (typeof document === "undefined") return "admin";
-  const match = document.cookie.match(/(?:^|; )userRole=([^;]*)/);
-  const raw = match ? decodeURIComponent(match[1]) : "";
-  const s = raw.toLowerCase().trim();
-  if (s === "superadmin") return "superadmin";
-  if (s === "admin" || s === "organization" || s === "hr") return "admin";
-  return "admin";
+function readRoleFromStorage(): AppRole {
+  if (typeof window === "undefined") return "org_admin";
+  const raw = (localStorage.getItem("role") ?? "").toLowerCase().trim();
+  if (raw === "superadmin") return "superadmin";
+  if (
+    raw === "org_admin" ||
+    raw === "admin" ||
+    raw === "hr" ||
+    raw === "employee"
+  ) {
+    return "org_admin";
+  }
+  return "org_admin";
 }
 
 interface LayoutProps {
@@ -27,15 +32,13 @@ interface LayoutProps {
 const MyLayout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [role, setRole] = useState<AppRole>("admin");
+  const [role, setRole] = useState<AppRole>("org_admin");
   const sidebarWidth = sidebarCollapsed ? 80 : 250;
 
-  // Role from document.cookie (set on login)
+  // Role from localStorage (set on login)
   useEffect(() => {
-    const normalizedRole = readRoleFromCookie();
-
-    const id = queueMicrotask(() => setRole(normalizedRole));
-    return () => queueMicrotask(() => clearTimeout(id as unknown as number));
+    const storedRole = readRoleFromStorage();
+    queueMicrotask(() => setRole(storedRole));
   }, []);
 
   useEffect(() => {

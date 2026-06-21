@@ -24,3 +24,12 @@ export interface ResendOtpPayload {
 export interface ForgotPasswordPayload {
   email: string;
 }
+
+export interface SetPasswordPayload {
+  setup_token: string;
+  password: string;
+}
+
+export interface SetPasswordResponse {
+  message?: string;
+}

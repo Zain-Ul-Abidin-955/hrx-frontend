@@ -4,6 +4,8 @@ import type {
   LoginPayload,
   LoginResponse,
   ResendOtpPayload,
+  SetPasswordPayload,
+  SetPasswordResponse,
   VerifyEmailPayload,
 } from "@/types/auth";
 
@@ -25,6 +27,17 @@ export const resendOtp = async (formData: ResendOtpPayload) => {
 export const forgotPassword = async (formData: ForgotPasswordPayload) => {
   const response = await axiosInstance.post(
     "/admin/auth/forgotPassword",
+    formData,
+  );
+  return response.data;
+};
+
+
+export const setPassword = async (
+  formData: SetPasswordPayload,
+): Promise<SetPasswordResponse> => {
+  const response = await axiosInstance.post<SetPasswordResponse>(
+    "/auth/org-admin/set-password",
     formData,
   );
   return response.data;
