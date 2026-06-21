@@ -14,7 +14,6 @@
   --color-grayLightColor: #B9BBBD;
   --color-halfGrayColor: #1E1E1E80;
   --color-blueColor: #2D9CDB;
-
 }
 
 @tailwind utilities;

@@ -8,7 +8,22 @@ const { Content, Sider } = Layout;
 
 const MOBILE_BREAKPOINT = 768;
 
-export type AppRole = "admin" | "organization" | "employee";
+export type AppRole = "superadmin" | "org_admin";
+
+function readRoleFromStorage(): AppRole {
+  if (typeof window === "undefined") return "org_admin";
+  const raw = (localStorage.getItem("role") ?? "").toLowerCase().trim();
+  if (raw === "superadmin") return "superadmin";
+  if (
+    raw === "org_admin" ||
+    raw === "admin" ||
+    raw === "hr" ||
+    raw === "employee"
+  ) {
+    return "org_admin";
+  }
+  return "org_admin";
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,16 +32,13 @@ interface LayoutProps {
 const MyLayout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [role, setRole] = useState<AppRole>("employee");
+  const [role, setRole] = useState<AppRole>("org_admin");
   const sidebarWidth = sidebarCollapsed ? 80 : 250;
 
-  // Role from localStorage (managed on login) — defer setState to avoid synchronous update in effect
+  // Role from localStorage (set on login)
   useEffect(() => {
-    const stored = (localStorage.getItem("userRole") || "employee").toLowerCase();
-    if (stored === "admin" || stored === "organization" || stored === "employee") {
-      const id = queueMicrotask(() => setRole(stored));
-      return () => queueMicrotask(() => clearTimeout(id as unknown as number));
-    }
+    const storedRole = readRoleFromStorage();
+    queueMicrotask(() => setRole(storedRole));
   }, []);
 
   useEffect(() => {

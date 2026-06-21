@@ -14,10 +14,31 @@ import { useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const parts = `; ${document.cookie}`.split(`; ${name}=`);
+  if (parts.length !== 2) return null;
+  const value = parts.pop()?.split(";").shift();
+  return value ? decodeURIComponent(value) : null;
+}
+
+function normalizeDisplayRole(raw: string | null): AppRole {
+  const s = (raw ?? "").toLowerCase().trim();
+  if (s === "superadmin") return "superadmin";
+  if (s === "org_admin" || s === "org_hr" || s === "org_employee") return "org_admin";
+  return "org_admin";
+}
+
+function clearAuthCookies(): void {
+  if (typeof document === "undefined") return;
+  for (const name of ["userRole", "userEmail"]) {
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+}
+
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
-  admin: "/admin/settings",
-  organization: "/orgnization/settings",
-  employee: "/employee/settings",
+  superadmin: "/superadmin/settings",
+  org_admin: "/orgnization/settings",
 };
 
 interface HeaderProps {
@@ -38,11 +59,11 @@ const Header: React.FC<HeaderProps> = ({
   const [userRole, setUserRole] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
-  // Get user info from localStorage on client side only
+  // Email / role from document.cookie (set on login)
   React.useEffect(() => {
     setIsMounted(true);
-    setUserEmail(localStorage.getItem("userEmail") || "user@example.com");
-    setUserRole(localStorage.getItem("userRole") || "employee");
+    setUserEmail(getCookie("userEmail") || "user@example.com");
+    setUserRole(normalizeDisplayRole(getCookie("userRole")));
   }, []);
 
   // Prevent hydration mismatch by not rendering until mounted
@@ -77,13 +98,10 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const handleLogout = () => {
-    // Clear all localStorage data
-    localStorage.clear();
-    // Close modal
+    clearAuthCookies();
     setIsLogoutModalOpen(false);
     
-    // Navigate to home page
-    router.push("/");
+    router.push("/login");
   };
 
   const handleCancelLogout = () => {

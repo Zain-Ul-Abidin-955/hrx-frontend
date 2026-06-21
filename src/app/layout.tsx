@@ -1,7 +1,7 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Metadata } from "next";
-
+import QueryProvider from "@/components/providers/QueryProvider";
 const poppins = Poppins({
   subsets: ["latin"],
   variable: "--font-poppins",
@@ -24,7 +24,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         className={`${poppins.variable} antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   )
