@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { Input, Badge, Avatar, Dropdown } from "antd";
+import { Badge, Avatar, Dropdown } from "antd";
 import {
   SearchOutlined,
   BellOutlined,
@@ -13,28 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
-
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const parts = `; ${document.cookie}`.split(`; ${name}=`);
-  if (parts.length !== 2) return null;
-  const value = parts.pop()?.split(";").shift();
-  return value ? decodeURIComponent(value) : null;
-}
-
-function normalizeDisplayRole(raw: string | null): AppRole {
-  const s = (raw ?? "").toLowerCase().trim();
-  if (s === "superadmin") return "superadmin";
-  if (s === "org_admin" || s === "org_hr" || s === "org_employee") return "org_admin";
-  return "org_admin";
-}
-
-function clearAuthCookies(): void {
-  if (typeof document === "undefined") return;
-  for (const name of ["userRole", "userEmail"]) {
-    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
-  }
-}
+import useUserStore from "@/store/userStore";
 
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
   superadmin: "/superadmin/settings",
@@ -47,27 +26,28 @@ interface HeaderProps {
   isSidebarCollapsed?: boolean;
 }
 
+function formatRoleLabel(role?: string | null): string {
+  if (!role) return "User";
+  return role.replace(/_/g, " ");
+}
+
 const Header: React.FC<HeaderProps> = ({
   role,
   onToggleSidebar,
   isSidebarCollapsed = false,
 }) => {
   const router = useRouter();
-  const [searchValue, setSearchValue] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [userRole, setUserRole] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
 
-  // Email / role from document.cookie (set on login)
-  React.useEffect(() => {
-    setIsMounted(true);
-    setUserEmail(getCookie("userEmail") || "user@example.com");
-    setUserRole(normalizeDisplayRole(getCookie("userRole")));
-  }, []);
+  const user = useUserStore((state) => state.user);
+  const loading = useUserStore((state) => state.loading);
+  const clearUser = useUserStore((state) => state.clearUser);
 
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!isMounted) {
+  const userEmail = user?.email ?? "";
+  const userRole = formatRoleLabel(user?.role);
+  const displayName = user?.organization?.name || userRole;
+
+  if (loading && !user) {
     return (
       <header className="bg-white shadow-sm border-b border-gray-200 w-full transition-all duration-300">
         <div className="h-16 px-6 flex items-center justify-between w-full">
@@ -98,9 +78,9 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const handleLogout = () => {
-    clearAuthCookies();
+    clearUser();
+    localStorage.removeItem("role");
     setIsLogoutModalOpen(false);
-    
     router.push("/login");
   };
 
@@ -180,9 +160,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 w-full transition-all duration-300">
       <div className="h-16 px-6 flex items-center justify-between w-full">
-        {/* Left Section - Toggle & Search */}
         <div className="flex items-center space-x-4 flex-1">
-          {/* Sidebar Toggle Button */}
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
@@ -195,28 +173,13 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </button>
           )}
-
-          {/* Search Bar */}
-          {/* <div className="hidden md:block w-full max-w-md">
-            <Input
-              placeholder="Search employees, documents, tasks..."
-              prefix={<SearchOutlined className="text-gray-400" />}
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              size="large"
-              className="rounded-lg"
-            />
-          </div> */}
         </div>
 
-        {/* Right Section - Actions & Profile */}
         <div className="flex items-center space-x-4">
-          {/* Mobile Search Icon */}
           <button className="md:hidden text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-colors">
             <SearchOutlined className="text-xl" />
           </button>
 
-          {/* Notifications */}
           <Dropdown
             menu={{ items: notificationItems }}
             trigger={["click"]}
@@ -229,7 +192,6 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           </Dropdown>
 
-          {/* User Profile Dropdown */}
           <Dropdown
             menu={{ items: userMenuItems }}
             trigger={["click"]}
@@ -238,7 +200,7 @@ const Header: React.FC<HeaderProps> = ({
             <button className="flex items-center space-x-3 hover:bg-gray-100 p-2 rounded-lg transition-colors">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-semibold text-gray-800 capitalize">
-                  {userRole}
+                  {displayName}
                 </p>
                 <p className="text-xs text-gray-500">{userEmail}</p>
               </div>
@@ -252,7 +214,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Logout Modal */}
       <LogoutModal
         open={isLogoutModalOpen}
         onConfirm={handleLogout}

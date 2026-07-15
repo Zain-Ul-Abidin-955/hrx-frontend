@@ -3,6 +3,7 @@ import { Layout } from "antd";
 import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import useUserStore from "@/store/userStore";
 
 const { Content, Sider } = Layout;
 
@@ -10,18 +11,9 @@ const MOBILE_BREAKPOINT = 768;
 
 export type AppRole = "superadmin" | "org_admin";
 
-function readRoleFromStorage(): AppRole {
-  if (typeof window === "undefined") return "org_admin";
-  const raw = (localStorage.getItem("role") ?? "").toLowerCase().trim();
-  if (raw === "superadmin") return "superadmin";
-  if (
-    raw === "org_admin" ||
-    raw === "admin" ||
-    raw === "hr" ||
-    raw === "employee"
-  ) {
-    return "org_admin";
-  }
+export function normalizeAppRole(raw?: string | null): AppRole {
+  const s = (raw ?? "").toLowerCase().trim();
+  if (s === "superadmin") return "superadmin";
   return "org_admin";
 }
 
@@ -32,14 +24,15 @@ interface LayoutProps {
 const MyLayout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [role, setRole] = useState<AppRole>("org_admin");
   const sidebarWidth = sidebarCollapsed ? 80 : 250;
 
-  // Role from localStorage (set on login)
+  const user = useUserStore((state) => state.user);
+  const fetchProfile = useUserStore((state) => state.fetchProfile);
+  const role = normalizeAppRole(user?.role);
+
   useEffect(() => {
-    const storedRole = readRoleFromStorage();
-    queueMicrotask(() => setRole(storedRole));
-  }, []);
+    fetchProfile().catch(() => {});
+  }, [fetchProfile]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
@@ -52,7 +45,6 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
     setSidebarCollapsed((prev) => !prev);
   };
 
-  // On mobile, close sidebar when navigating
   const handleSidebarNavigate = () => {
     if (isMobile) setSidebarCollapsed(true);
   };
@@ -63,7 +55,6 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
         minHeight: "100vh",
       }}
     >
-      {/* Mobile overlay backdrop */}
       {isMobile && !sidebarCollapsed && (
         <div
           className="fixed inset-0 bg-black/40 z-40 transition-opacity"
@@ -72,7 +63,6 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* Fixed Sidebar - overlay on mobile when open */}
       <Sider
         width={isMobile ? 250 : sidebarWidth}
         collapsed={isMobile ? false : sidebarCollapsed}
@@ -95,14 +85,12 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
         />
       </Sider>
 
-      {/* Main Layout with Header */}
       <Layout
         style={{
           marginLeft: isMobile ? 0 : sidebarWidth,
           transition: "all 0.3s ease",
         }}
       >
-        {/* Fixed Header */}
         <div
           style={{
             position: "fixed",
@@ -121,11 +109,10 @@ const MyLayout: React.FC<LayoutProps> = ({ children }) => {
           />
         </div>
 
-        {/* Content Area with top padding for fixed header */}
         <Content
           className="bg-offWhiteColor"
           style={{
-            marginTop: "64px", // Height of fixed header
+            marginTop: "64px",
             minHeight: "calc(100vh - 64px)",
           }}
         >

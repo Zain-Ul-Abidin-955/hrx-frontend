@@ -16,6 +16,7 @@ import {
 } from "@ant-design/icons";
 import LogoutModal from "@/components/modal/LogoutModal";
 import type { AppRole } from "@/layout/Layout";
+import useUserStore from "@/store/userStore";
 
 
 interface SidebarItem {
@@ -109,6 +110,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const router = useRouter();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
+  const user = useUserStore((state) => state.user);
+  const clearUser = useUserStore((state) => state.clearUser);
+  const orgName = user?.organization?.name;
+
   const isActiveRoute = (item: SidebarItem): boolean => {
     return item.paths.some((path) => pathname === path);
   };
@@ -118,6 +123,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogout = () => {
+    clearUser();
+    localStorage.removeItem("role");
     setIsLogoutModalOpen(false);
     router.push("/login");
   };
@@ -145,15 +152,15 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <RobotOutlined className="text-3xl text-blue-600 shrink-0" />
           {!isCollapsed && (
-            <>
-              <span className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                HRX AI
-              </span>
-            </>
+            <span className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              HRX AI
+            </span>
           )}
         </div>
         {!isCollapsed && (
-          <p className="text-xs text-gray-500 mt-2">HR Management System</p>
+          <p className="text-xs text-gray-500 mt-2">
+            {orgName || "HR Management System"}
+          </p>
         )}
       </div>
 

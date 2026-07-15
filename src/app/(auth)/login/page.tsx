@@ -37,8 +37,6 @@ const Login: React.FC = () => {
             return;
           }
 
-          localStorage.setItem("role", role);
-
           if (role === "superadmin") {
             router.push("/superadmin/dashboard");
           } else if (role === "org_admin" || role === "org_hr" || role === "org_employee") {
