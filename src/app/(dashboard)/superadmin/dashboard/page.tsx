@@ -99,7 +99,9 @@ const StatusDropdown: React.FC<StatusDropdownProps> = ({ record }) => {
   return (
     <>
       <Select
-        value="pending"
+        placeholder="Pending"
+        value={null}
+        allowClear={false}
         loading={isPending}
         disabled={isPending}
         className="min-w-[140px] capitalize"

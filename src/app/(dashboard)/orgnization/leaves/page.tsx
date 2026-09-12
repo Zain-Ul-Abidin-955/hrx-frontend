@@ -262,7 +262,9 @@ const OrganizationLeavesPage: React.FC = () => {
 
           return (
             <Select
-              value="pending"
+              placeholder="Action"
+              value={null}
+              allowClear={false}
               className="min-w-[140px]"
               options={[
                 { label: "Approve", value: "approved" },
