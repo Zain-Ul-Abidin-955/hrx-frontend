@@ -1,199 +1,296 @@
 "use client";
-import React from "react";
-import { Card, Row, Col, Table, Button, Tag, Avatar } from "antd";
+
+import React, { useMemo, useState } from "react";
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Tag,
+  message,
+} from "antd";
 import {
   CalendarOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
   ClockCircleOutlined,
-  UserOutlined,
-  // RobotOutlined,
+  CloseCircleOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
+import dayjs, { type Dayjs } from "dayjs";
+import MyTable from "@/components/table/MyTable";
+import { LoadingSpinner } from "@/components/loader/Loading";
+import {
+  checkInAttendance,
+  checkOutAttendance,
+  completeAttendanceCheckout,
+  getDailyAttendance,
+  getMyAttendance,
+} from "@/api/collection/attendance";
+import type { AttendanceRosterRow } from "@/types/attendance";
+import useUserStore from "@/store/userStore";
+import { getNameInitial } from "@/utils/getNameInitial";
+import {
+  formatAttendanceStatus,
+  formatAttendanceTime,
+  formatWorkingHours,
+  getAttendanceStatusColor,
+  isSameApiDate,
+  toApiDate,
+} from "@/utils/attendanceHelpers";
 
-const Attendance: React.FC = () => {
-  const stats = [
-    {
-      title: "Present Today",
-      value: "234",
-      percentage: "94.4%",
-      icon: <CheckCircleOutlined className="text-3xl text-green-600" />,
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Absent",
-      value: "8",
-      percentage: "3.2%",
-      icon: <CloseCircleOutlined className="text-3xl text-red-600" />,
-      bgColor: "bg-red-50",
-    },
-    {
-      title: "Late Arrivals",
-      value: "6",
-      percentage: "2.4%",
-      icon: <ClockCircleOutlined className="text-3xl text-orange-600" />,
-      bgColor: "bg-orange-50",
-    },
-    {
-      title: "On Leave",
-      value: "14",
-      percentage: "5.6%",
-      icon: <CalendarOutlined className="text-3xl text-blue-600" />,
-      bgColor: "bg-blue-50",
-    },
-  ];
+function getErrorMessage(error: unknown, fallback: string) {
+  if (!isAxiosError(error)) return fallback;
+  const data = error.response?.data as
+    | { message?: string; detail?: string | { msg?: string }[] }
+    | undefined;
 
-  const columns = [
-    {
-      title: "Employee",
-      dataIndex: "name",
-      key: "name",
-      render: (text: string, record: any) => (
-        <div className="flex items-center space-x-3">
-          <Avatar size={40} icon={<UserOutlined />} className="!mr-2" />
-          <div>
-            <p className="font-semibold text-gray-800">{text}</p>
-            <p className="text-xs text-gray-500">{record.employeeId}</p>
+  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail)) {
+    return (
+      data.detail.map((item) => item?.msg).filter(Boolean).join(", ") ||
+      fallback
+    );
+  }
+  return fallback;
+}
+
+const OrganizationAttendancePage: React.FC = () => {
+  const queryClient = useQueryClient();
+  const user = useUserStore((state) => state.user);
+  const canManageRoster =
+    user?.role === "hr_manager" || user?.role === "org_admin";
+  const canSelfAttend = user?.role === "hr_manager";
+  const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
+  const [completeTarget, setCompleteTarget] =
+    useState<AttendanceRosterRow | null>(null);
+  const [completeForm] = Form.useForm<{ reason: string }>();
+
+  const apiDate = toApiDate(selectedDate.toDate());
+
+  const {
+    data: roster = [],
+    isLoading,
+    isError,
+    isFetching,
+    error,
+  } = useQuery({
+    queryKey: ["daily-attendance", apiDate],
+    queryFn: () => getDailyAttendance(apiDate),
+    enabled: canManageRoster,
+  });
+
+  const { data: myHistory = [] } = useQuery({
+    queryKey: ["my-attendance", "today-summary"],
+    queryFn: () =>
+      getMyAttendance({
+        start_date: toApiDate(new Date()),
+        end_date: toApiDate(new Date()),
+      }),
+    enabled: canSelfAttend,
+  });
+
+  const todayMine = useMemo(
+    () => myHistory.find((item) => isSameApiDate(item.date)) ?? null,
+    [myHistory],
+  );
+
+  const canCheckIn =
+    canSelfAttend &&
+    (!todayMine || ["absent", "non_working"].includes(todayMine.status));
+  const canCheckOut = canSelfAttend && todayMine?.status === "checked_in";
+
+  const stats = useMemo(() => {
+    const present = roster.filter((item) => item.status === "present").length;
+    const checkedIn = roster.filter((item) => item.status === "checked_in").length;
+    const absent = roster.filter((item) => item.status === "absent").length;
+    const onLeave = roster.filter((item) => item.status === "on_leave").length;
+    return [
+      {
+        title: "Present",
+        value: String(present),
+        icon: <CheckCircleOutlined className="text-3xl text-green-600" />,
+        bgColor: "bg-green-50",
+      },
+      {
+        title: "Checked In",
+        value: String(checkedIn),
+        icon: <ClockCircleOutlined className="text-3xl text-blue-600" />,
+        bgColor: "bg-blue-50",
+      },
+      {
+        title: "Absent",
+        value: String(absent),
+        icon: <CloseCircleOutlined className="text-3xl text-red-600" />,
+        bgColor: "bg-red-50",
+      },
+      {
+        title: "On Leave",
+        value: String(onLeave),
+        icon: <CalendarOutlined className="text-3xl text-purple-600" />,
+        bgColor: "bg-purple-50",
+      },
+    ];
+  }, [roster]);
+
+  const { mutate: doCheckIn, isPending: isCheckingIn } = useMutation({
+    mutationFn: checkInAttendance,
+    onSuccess: () => {
+      message.success("Checked in successfully");
+      queryClient.invalidateQueries({ queryKey: ["my-attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["daily-attendance"] });
+    },
+    onError: (err) => {
+      message.error(getErrorMessage(err, "Failed to check in."));
+    },
+  });
+
+  const { mutate: doCheckOut, isPending: isCheckingOut } = useMutation({
+    mutationFn: checkOutAttendance,
+    onSuccess: () => {
+      message.success("Checked out successfully");
+      queryClient.invalidateQueries({ queryKey: ["my-attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["daily-attendance"] });
+    },
+    onError: (err) => {
+      message.error(getErrorMessage(err, "Failed to check out."));
+    },
+  });
+
+  const { mutate: completeCheckout, isPending: isCompleting } = useMutation({
+    mutationFn: ({
+      attendanceId,
+      reason,
+    }: {
+      attendanceId: string;
+      reason: string;
+    }) => completeAttendanceCheckout(attendanceId, { reason }),
+    onSuccess: () => {
+      message.success("Checkout completed successfully");
+      queryClient.invalidateQueries({ queryKey: ["daily-attendance"] });
+      setCompleteTarget(null);
+      completeForm.resetFields();
+    },
+    onError: (err) => {
+      message.error(getErrorMessage(err, "Failed to complete checkout."));
+    },
+  });
+
+  const tableData = useMemo<AttendanceRosterRow[]>(
+    () =>
+      roster.map((item) => {
+        const employeeName = `${item.employee.first_name} ${item.employee.last_name}`.trim();
+        return {
+          ...item,
+          key: item.employee.id,
+          employeeName,
+          checkInLabel: formatAttendanceTime(item.check_in_at),
+          checkOutLabel: formatAttendanceTime(item.check_out_at),
+          workingHours: formatWorkingHours(item.check_in_at, item.check_out_at),
+          statusLabel: formatAttendanceStatus(item.status),
+        };
+      }),
+    [roster],
+  );
+
+  const columns: ColumnsType<AttendanceRosterRow> = useMemo(
+    () => [
+      {
+        title: "Employee",
+        key: "employee",
+        render: (_value, record) => (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primaryColor text-white font-semibold shrink-0">
+              {getNameInitial(record.employeeName)}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">{record.employeeName}</p>
+              <p className="text-xs text-gray-500">{record.employee.designation}</p>
+            </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      title: "Department",
-      dataIndex: "department",
-      key: "department",
-      render: (dept: string) => <Tag color="blue">{dept}</Tag>,
-    },
-    {
-      title: "Check-In",
-      dataIndex: "checkIn",
-      key: "checkIn",
-      render: (time: string) => (
-        time && time !== "-" ? (
-          <span className="text-gray-700 font-medium">{time}</span>
-        ) : (
-          <Tag color="red">Missing</Tag>
-        )
-      ),
-    },
-    {
-      title: "Check-Out",
-      dataIndex: "checkOut",
-      key: "checkOut",
-      render: (time: string) => (
-        time && time !== "-" ? (
-          <span className="text-gray-700 font-medium">{time}</span>
-        ) : (
-          <Tag color="red">Missing</Tag>
-        )
-      ),
-    },
-    {
-      title: "Working Hours",
-      dataIndex: "workingHours",
-      key: "workingHours",
-      render: (hours: string) => (
-        <span className="font-semibold text-gray-800">{hours}</span>
-      ),
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => (
-        <Tag
-          color={
-            status === "Present"
-              ? "green"
-              : status === "Late"
-              ? "orange"
-              : status === "Absent"
-              ? "red"
-              : "blue"
+        ),
+      },
+      {
+        title: "Check-In",
+        dataIndex: "checkInLabel",
+        key: "checkInLabel",
+        render: (time: string) =>
+          time === "—" ? <Tag color="red">Missing</Tag> : (
+            <span className="text-gray-700 font-medium">{time}</span>
+          ),
+      },
+      {
+        title: "Check-Out",
+        dataIndex: "checkOutLabel",
+        key: "checkOutLabel",
+        render: (time: string) =>
+          time === "—" ? <Tag color="red">Missing</Tag> : (
+            <span className="text-gray-700 font-medium">{time}</span>
+          ),
+      },
+      {
+        title: "Working Hours",
+        dataIndex: "workingHours",
+        key: "workingHours",
+        render: (hours: string) => (
+          <span className="font-semibold text-gray-800">{hours}</span>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (_status, record) => (
+          <Tag
+            color={getAttendanceStatusColor(record.status)}
+            className="capitalize"
+          >
+            {record.statusLabel}
+          </Tag>
+        ),
+      },
+      {
+        title: "Action",
+        key: "action",
+        width: 180,
+        render: (_value, record) => {
+          const canComplete =
+            record.status === "checked_in" && Boolean(record.attendance_id);
+
+          if (!canComplete) {
+            return <span className="text-gray-400 text-sm">—</span>;
           }
-        >
-          {status}
-        </Tag>
-      ),
-    },
-  ];
 
-  const attendanceData = [
-    {
-      key: "1",
-      name: "John Doe",
-      employeeId: "EMP-001",
-      department: "Engineering",
-      checkIn: "09:00 AM",
-      checkOut: "06:00 PM",
-      workingHours: "9h 00m",
-      status: "Present",
-    },
-    {
-      key: "2",
-      name: "Sarah Smith",
-      employeeId: "EMP-002",
-      department: "Marketing",
-      checkIn: "09:15 AM",
-      checkOut: "06:10 PM",
-      workingHours: "8h 55m",
-      status: "Late",
-    },
-    {
-      key: "3",
-      name: "Mike Johnson",
-      employeeId: "EMP-003",
-      department: "Sales",
-      checkIn: "08:55 AM",
-      checkOut: "05:50 PM",
-      workingHours: "8h 55m",
-      status: "Present",
-    },
-    {
-      key: "4",
-      name: "Emma Wilson",
-      employeeId: "EMP-004",
-      department: "HR",
-      checkIn: "-",
-      checkOut: "-",
-      workingHours: "-",
-      status: "Leave",
-    },
-    {
-      key: "5",
-      name: "Robert Fox",
-      employeeId: "EMP-005",
-      department: "Finance",
-      checkIn: "-",
-      checkOut: "-",
-      workingHours: "-",
-      status: "Absent",
-    },
-    {
-      key: "6",
-      name: "Ava Martin",
-      employeeId: "EMP-006",
-      department: "Design",
-      checkIn: "09:20 AM",
-      checkOut: "-",
-      workingHours: "-",
-      status: "Present",
-    },
-    {
-      key: "7",
-      name: "Noah Brown",
-      employeeId: "EMP-007",
-      department: "Operations",
-      checkIn: "-",
-      checkOut: "06:05 PM",
-      workingHours: "-",
-      status: "Late",
-    },
-  ];
+          return (
+            <Button
+              type="link"
+              className="!text-primaryColor !px-0"
+              onClick={() => {
+                completeForm.resetFields();
+                setCompleteTarget(record);
+              }}
+            >
+              Complete Checkout
+            </Button>
+          );
+        },
+      },
+    ],
+    [completeForm],
+  );
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+  if (!canManageRoster) {
+    return (
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">
             Attendance Management
@@ -202,90 +299,174 @@ const Attendance: React.FC = () => {
             Track and manage employee attendance
           </p>
         </div>
-        <Button
-          type="primary"
-          icon={<CalendarOutlined />}
-          size="large"
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          Mark Attendance
-        </Button>
+        <Card>
+          <p className="text-gray-600">
+            You do not have permission to view the attendance roster.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Attendance Management
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Track and manage employee attendance
+          </p>
+        </div>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Attendance Management
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Track and manage employee attendance
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <DatePicker
+            value={selectedDate}
+            allowClear={false}
+            disabledDate={(current) =>
+              current != null && current.isAfter(dayjs(), "day")
+            }
+            onChange={(value) => {
+              if (value) setSelectedDate(value);
+            }}
+            className="w-full sm:w-auto"
+          />
+          {canSelfAttend && (
+            <div className="flex gap-3">
+              <Button
+                type="primary"
+                icon={<LoginOutlined />}
+                size="large"
+                className="!bg-primaryColor"
+                loading={isCheckingIn}
+                disabled={!canCheckIn || isCheckingOut}
+                onClick={() => doCheckIn()}
+              >
+                My Check In
+              </Button>
+              <Button
+                icon={<LogoutOutlined />}
+                size="large"
+                loading={isCheckingOut}
+                disabled={!canCheckOut || isCheckingIn}
+                onClick={() => doCheckOut()}
+              >
+                My Check Out
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Stats Cards */}
       <Row gutter={[16, 16]}>
-        {stats.map((stat, index) => (
-          <Col xs={24} sm={12} lg={6} key={index}>
+        {stats.map((stat) => (
+          <Col xs={24} sm={12} lg={6} key={stat.title}>
             <Card className="hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-500 text-sm mb-1">{stat.title}</p>
                   <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
-                  <p className="text-sm text-gray-600 mt-1">{stat.percentage}</p>
                 </div>
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                  {stat.icon}
-                </div>
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>{stat.icon}</div>
               </div>
             </Card>
           </Col>
         ))}
       </Row>
 
-      {/* Main Content */}
-      <Row gutter={[16, 16]}>
-        {/* Attendance Table */}
-        <Col xs={24}>
-          <Card
-            title={
-              <span className="text-lg font-semibold">Today&apos;s Attendance</span>
-            }
-          >
-            <Table
-              columns={columns}
-              dataSource={attendanceData}
-              pagination={false}
-              scroll={{ x: 900 }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <MyTable<AttendanceRosterRow>
+        title="Daily Attendance Roster"
+        searchPlaceholder="Search employees..."
+        columns={columns}
+        dataSource={tableData}
+        loading={isFetching}
+        searchKeys={[
+          "employeeName",
+          "statusLabel",
+          "checkInLabel",
+          "checkOutLabel",
+        ]}
+        paginationConfig={{ pageSize: 8 }}
+        scroll={{ x: 1000 }}
+        locale={{
+          emptyText: isError
+            ? getErrorMessage(error, "Failed to load attendance roster.")
+            : "No attendance records found for this date",
+        }}
+      />
 
-      {/* AI Insights */}
-      {/* <Card className="bg-linear-to-r from-blue-50 to-purple-50 border-blue-200">
-        <div className="flex items-start space-x-4">
-          <div className="bg-blue-100 p-4 rounded-full">
-            <RobotOutlined className="text-3xl text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              AI Attendance Insights
-            </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start space-x-2">
-                <CheckCircleOutlined className="text-green-500 mt-1" />
-                <span>
-                  Attendance rate improved by 5% compared to last month
-                </span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <ClockCircleOutlined className="text-orange-500 mt-1" />
-                <span>
-                  6 employees have been consistently late this week - consider review
-                </span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <CalendarOutlined className="text-blue-500 mt-1" />
-                <span>
-                  Peak absence day: Friday (recommend shift planning)
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </Card> */}
+      <Modal
+        title="Complete Checkout"
+        open={completeTarget != null}
+        onCancel={() => {
+          if (isCompleting) return;
+          setCompleteTarget(null);
+          completeForm.resetFields();
+        }}
+        onOk={() => completeForm.submit()}
+        okText="Complete"
+        cancelText="Cancel"
+        confirmLoading={isCompleting}
+        okButtonProps={{
+          icon: <SaveOutlined />,
+          className:
+            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
+        }}
+        centered
+        destroyOnHidden
+      >
+        <p className="text-gray-600 mb-4">
+          Complete checkout for{" "}
+          <span className="font-semibold text-gray-800">
+            {completeTarget?.employeeName}
+          </span>
+          . A reason is required.
+        </p>
+        <Form
+          form={completeForm}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values) => {
+            if (!completeTarget?.attendance_id) return;
+            completeCheckout({
+              attendanceId: completeTarget.attendance_id,
+              reason: values.reason.trim(),
+            });
+          }}
+        >
+          <Form.Item
+            name="reason"
+            label={
+              <span className="text-secondaryTextColor font-medium">Reason</span>
+            }
+            rules={[{ required: true, message: "Please enter a reason" }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="e.g. Employee forgot to check out"
+              className="rounded-lg"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
 
-export default Attendance;
+export default OrganizationAttendancePage;

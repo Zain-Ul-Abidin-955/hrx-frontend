@@ -34,7 +34,7 @@ export const approveOrganizationApplication = async (
     `/organizations/applications/${id}/approve`,
   );
   return response.data;
-};
+};  
 
 export const rejectOrganizationApplication = async (
   id: string,

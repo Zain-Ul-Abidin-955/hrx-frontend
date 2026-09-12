@@ -298,6 +298,7 @@ const OrganizationListsPage: React.FC = () => {
               <CustomInput
                 name="email"
                 label="Email"
+                disabled={true}
                 type="email"
                 placeholder="Enter organization email"
                 icon={<MailOutlined />}
@@ -319,13 +320,6 @@ const OrganizationListsPage: React.FC = () => {
                 required={false}
               />
             </Form>
-
-            {selectedOrganization && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-                <span>Created: {formatDate(selectedOrganization.created_at)}</span>
-                <span>Updated: {formatDate(selectedOrganization.updated_at)}</span>
-              </div>
-            )}
           </>
         )}
       </Modal>

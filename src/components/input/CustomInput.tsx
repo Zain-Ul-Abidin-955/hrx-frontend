@@ -150,71 +150,69 @@ const TextAreaField = forwardRef<HTMLTextAreaElement, FieldProps>(
   },
 );
 
-const InputField = forwardRef<HTMLInputElement, FieldProps>(
-  function InputField(
-    {
-      value,
-      onChange,
-      onBlur,
-      id,
-      placeholder,
-      disabled,
-      icon,
-      inputClassName = "",
-      type = "text",
-      maxLength,
-    },
-    ref,
-  ) {
-    const [showPassword, setShowPassword] = useState(false);
-    const paddingLeft = icon ? "pl-10" : "pl-3";
-    const paddingRight = type === "password" ? "pr-10" : "pr-3";
-
-    const htmlType =
-      type === "password"
-        ? showPassword
-          ? "text"
-          : "password"
-        : type === "email"
-          ? "email"
-          : type === "url"
-            ? "url"
-            : "text";
-
-    return (
-      <div className="relative w-full">
-        {icon && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-darkGrayColor pointer-events-none z-10">
-            {icon}
-          </span>
-        )}
-        <input
-          ref={ref}
-          id={id}
-          type={htmlType}
-          value={value ?? ""}
-          onChange={onChange}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          disabled={disabled}
-          maxLength={maxLength}
-          className={`${baseInputClass} ${paddingLeft} ${paddingRight} ${inputClassName}`}
-        />
-        {type === "password" && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-darkGrayColor hover:text-secondaryTextColor"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-          </button>
-        )}
-      </div>
-    );
+const InputField = forwardRef<HTMLInputElement, FieldProps>(function InputField(
+  {
+    value,
+    onChange,
+    onBlur,
+    id,
+    placeholder,
+    disabled,
+    icon,
+    inputClassName = "",
+    type = "text",
+    maxLength,
   },
-);
+  ref,
+) {
+  const [showPassword, setShowPassword] = useState(false);
+  const paddingLeft = icon ? "pl-10" : "pl-3";
+  const paddingRight = type === "password" ? "pr-10" : "pr-3";
+
+  const htmlType =
+    type === "password"
+      ? showPassword
+        ? "text"
+        : "password"
+      : type === "email"
+        ? "email"
+        : type === "url"
+          ? "url"
+          : "text";
+
+  return (
+    <div className="relative w-full">
+      {icon && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-darkGrayColor pointer-events-none z-10">
+          {icon}
+        </span>
+      )}
+      <input
+        ref={ref}
+        id={id}
+        type={htmlType}
+        value={value ?? ""}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        className={`${baseInputClass} ${paddingLeft} ${paddingRight} ${inputClassName}`}
+      />
+      {type === "password" && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setShowPassword((prev) => !prev)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-darkGrayColor hover:text-secondaryTextColor"
+          aria-label={showPassword ? "Hide password" : "Show password"}
+        >
+          {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+        </button>
+      )}
+    </div>
+  );
+});
 
 const CustomInput: React.FC<CustomInputProps> = ({
   name,

@@ -9,11 +9,12 @@ const { Content, Sider } = Layout;
 
 const MOBILE_BREAKPOINT = 768;
 
-export type AppRole = "superadmin" | "org_admin";
+export type AppRole = "superadmin" | "org_admin" | "employee";
 
 export function normalizeAppRole(raw?: string | null): AppRole {
   const s = (raw ?? "").toLowerCase().trim();
   if (s === "superadmin") return "superadmin";
+  if (s === "employee") return "employee";
   return "org_admin";
 }
 

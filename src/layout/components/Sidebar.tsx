@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Tooltip } from "antd";
+import { Skeleton, Tooltip } from "antd";
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -14,8 +14,8 @@ import {
   LogoutOutlined,
   BankOutlined,
   DownOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import LogoutModal from "@/components/modal/MyModal";
 import type { AppRole } from "@/layout/Layout";
 import useUserStore from "@/store/userStore";
 import MyModal from "@/components/modal/MyModal";
@@ -45,28 +45,14 @@ const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
     {
       name: "Organizations",
       icon: <BankOutlined />,
-      paths: [
-        "/superadmin/organization/applications",
-        "/superadmin/organization/lists",
-      ],
-      children: [
-        {
-          name: "Application",
-          link: "/superadmin/organization/applications",
-          paths: ["/superadmin/organization/applications"],
-        },
-        {
-          name: "List",
-          link: "/superadmin/organization/lists",
-          paths: ["/superadmin/organization/lists"],
-        },
-      ],
+      link: "/superadmin/organization",
+      paths: ["/superadmin/organization"],
     },
     {
-      name: "Settings",
-      icon: <SettingOutlined />,
-      link: "/superadmin/settings",
-      paths: ["/superadmin/settings"],
+      name: "Profile",
+      icon: <UserOutlined />,
+      link: "/superadmin/profile",
+      paths: ["/superadmin/profile"],
     },
   ],
 
@@ -95,6 +81,12 @@ const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
       link: "/orgnization/attendance",
       paths: ["/orgnization/attendance"],
     },
+     {
+      name: "Leaves",
+      icon: <FileTextOutlined />,
+      link: "/orgnization/leaves",
+      paths: ["/orgnization/leaves"],
+    },
     {
       name: "AI Assistant",
       icon: <RobotOutlined />,
@@ -102,16 +94,36 @@ const SIDEBAR_BY_ROLE: Record<AppRole, SidebarItem[]> = {
       paths: ["/orgnization/chat-bot"],
     },
     {
-      name: "Reports",
-      icon: <FileTextOutlined />,
-      link: "/orgnization/reports",
-      paths: ["/orgnization/reports"],
+      name: "Profile",
+      icon: <UserOutlined />,
+      link: "/orgnization/profile",
+      paths: ["/orgnization/profile"],
+    },
+  ],
+  employee: [
+    {
+      name: "Dashboard",
+      icon: <DashboardOutlined />,
+      link: "/employee/dashboard",
+      paths: ["/employee/dashboard", "/employee"],
     },
     {
-      name: "Settings",
-      icon: <SettingOutlined />,
-      link: "/orgnization/settings",
-      paths: ["/orgnization/settings"],
+      name: "Attendance",
+      icon: <CalendarOutlined />,
+      link: "/employee/attendance",
+      paths: ["/employee/attendance"],
+    },
+    {
+      name: "Leave",
+      icon: <FileTextOutlined />,
+      link: "/employee/leaves",
+      paths: ["/employee/leaves"],
+    },
+    {
+      name: "Profile",
+      icon: <UserOutlined />,
+      link: "/employee/profile",
+      paths: ["/employee/profile"],
     },
   ],
 };
@@ -127,7 +139,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
   onNavigate,
 }) => {
-  const sidebarItems = SIDEBAR_BY_ROLE[role] ?? SIDEBAR_BY_ROLE.org_admin;
   const pathname = usePathname();
   const router = useRouter();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -136,6 +147,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const user = useUserStore((state) => state.user);
   const clearUser = useUserStore((state) => state.clearUser);
   const orgName = user?.organization?.name;
+  const hasRole = Boolean(user?.role);
+  const sidebarItems = hasRole
+    ? (SIDEBAR_BY_ROLE[role] ?? SIDEBAR_BY_ROLE.org_admin)
+    : [];
 
   const isActiveRoute = (paths: string[]): boolean => {
     return paths.some((path) => pathname === path);
@@ -249,7 +264,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className={`flex items-center ${isCollapsed ? "justify-center" : "justify-center space-x-2"
             }`}
         >
-          <RobotOutlined className="text-3xl text-primaryColor  shrink-0" />
+          {/* <RobotOutlined className="text-3xl text-primaryColor  shrink-0" /> */}
           {!isCollapsed && (
             <span className="text-2xl font-bold bg-linear-to-r from-primaryColor to-primaryColor bg-clip-text text-transparent">
               HRX AI
@@ -257,19 +272,59 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
         {!isCollapsed && (
-          <p className="text-xs text-gray-500 mt-2">
-            {orgName || "HR Management System"}
-          </p>
+          <div className="mt-2 w-full flex justify-center">
+            {hasRole ? (
+              <p className="text-xs text-gray-500">
+                {orgName || "HR Management System"}
+              </p>
+            ) : (
+              <Skeleton.Input active size="small" style={{ width: 140, height: 14 }} />
+            )}
+          </div>
         )}
       </div>
 
       <div className="flex-1 py-6 overflow-y-auto">
-        <ul className={`space-y-2 ${isCollapsed ? "px-2" : "px-3"}`}>
-          {sidebarItems.map((item) => {
-            const hasChildren = Boolean(item.children?.length);
-            const isOpen = isMenuOpen(item);
+        {!hasRole ? (
+          <ul className={`space-y-3 ${isCollapsed ? "px-2" : "px-3"}`}>
+            {Array.from({ length: isCollapsed ? 5 : 6 }).map((_, index) => (
+              <li
+                key={index}
+                className={`flex items-center ${isCollapsed ? "justify-center px-3 py-3" : "space-x-3 px-4 py-3"}`}
+              >
+                <Skeleton.Avatar active size="small" shape="square" />
+                {!isCollapsed && (
+                  <Skeleton.Input
+                    active
+                    size="small"
+                    style={{ width: "70%", height: 16, minWidth: 0 }}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className={`space-y-2 ${isCollapsed ? "px-2" : "px-3"}`}>
+            {sidebarItems.map((item) => {
+              const hasChildren = Boolean(item.children?.length);
+              const isOpen = isMenuOpen(item);
 
-            if (hasChildren) {
+              if (hasChildren) {
+                return (
+                  <li key={item.name}>
+                    <Tooltip
+                      title={item.name}
+                      placement="right"
+                      trigger="hover"
+                      open={isCollapsed ? undefined : false}
+                    >
+                      {renderParentButton(item, isOpen)}
+                    </Tooltip>
+                    {renderChildren(item, isOpen)}
+                  </li>
+                );
+              }
+
               return (
                 <li key={item.name}>
                   <Tooltip
@@ -278,42 +333,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                     trigger="hover"
                     open={isCollapsed ? undefined : false}
                   >
-                    {renderParentButton(item, isOpen)}
+                    <Link
+                      href={item.link ?? "#"}
+                      onClick={onNavigate}
+                      className={`flex items-center rounded-lg transition-all duration-200 ${isCollapsed
+                          ? "justify-center px-3 py-3"
+                          : "space-x-3 px-4 py-3"
+                        } ${isActiveRoute(item.paths)
+                          ? "!bg-primaryColor !text-white shadow-md"
+                          : "!text-primaryColor hover:!bg-gray-100 hover:!text-primaryColor"
+                        }`}
+                    >
+                      <span className="text-xl shrink-0">{item.icon}</span>
+                      {!isCollapsed && (
+                        <span className="font-medium text-sm">{item.name}</span>
+                      )}
+                    </Link>
                   </Tooltip>
-                  {renderChildren(item, isOpen)}
                 </li>
               );
-            }
-
-            return (
-              <li key={item.name}>
-                <Tooltip
-                  title={item.name}
-                  placement="right"
-                  trigger="hover"
-                  open={isCollapsed ? undefined : false}
-                >
-                  <Link
-                    href={item.link ?? "#"}
-                    onClick={onNavigate}
-                    className={`flex items-center rounded-lg transition-all duration-200 ${isCollapsed
-                        ? "justify-center px-3 py-3"
-                        : "space-x-3 px-4 py-3"
-                      } ${isActiveRoute(item.paths)
-                        ? "!bg-primaryColor !text-white shadow-md"
-                        : "!text-primaryColor hover:!bg-gray-100 hover:!text-primaryColor"
-                      }`}
-                  >
-                    <span className="text-xl shrink-0">{item.icon}</span>
-                    {!isCollapsed && (
-                      <span className="font-medium text-sm">{item.name}</span>
-                    )}
-                  </Link>
-                </Tooltip>
-              </li>
-            );
-          })}
-        </ul>
+            })}
+          </ul>
+        )}
       </div>
 
       <div

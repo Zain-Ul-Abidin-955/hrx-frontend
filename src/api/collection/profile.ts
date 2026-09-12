@@ -1,13 +1,14 @@
 import axiosInstance from "../axios/axiosInstance";
+import type { UpdateProfilePayload, UserProfile } from "@/types/profile";
 
-//Get profile information
-export const getProfile = async () => {
-    const response = await axiosInstance.get('/profile');
-    return response.data;
+export const getProfile = async (): Promise<UserProfile> => {
+  const response = await axiosInstance.get("/profile");
+  return response.data;
 };
 
-//Update profile information
-// export const updateProfile = async (profileData) => {
-//     const response = await axiosInstance.put('/admin/auth/profile', profileData);
-//     return response.data;
-// };
+export const updateProfile = async (
+  profileData: UpdateProfilePayload,
+): Promise<UserProfile> => {
+  const response = await axiosInstance.put("/profile", profileData);
+  return response.data;
+};

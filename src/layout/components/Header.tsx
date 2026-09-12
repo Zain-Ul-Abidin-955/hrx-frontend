@@ -14,10 +14,13 @@ import { useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/MyModal";
 import type { AppRole } from "@/layout/Layout";
 import useUserStore from "@/store/userStore";
+import { getNameInitial } from "@/utils/getNameInitial";
+import { getUserDisplayName } from "@/utils/profileHelpers";
 
 const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
-  superadmin: "/superadmin/settings",
-  org_admin: "/orgnization/settings",
+  superadmin: "/superadmin/profile",
+  org_admin: "/orgnization/profile",
+  employee: "/employee/profile",
 };
 
 interface HeaderProps {
@@ -45,7 +48,9 @@ const Header: React.FC<HeaderProps> = ({
 
   const userEmail = user?.email ?? "";
   const userRole = formatRoleLabel(user?.role);
-  const displayName = user?.organization?.name || userRole;
+  const userName = getUserDisplayName(user);
+  const displayName = userName || userRole;
+  const avatarInitial = getNameInitial(userName || displayName);
 
   if (loading && !user) {
     return (
@@ -93,13 +98,8 @@ const Header: React.FC<HeaderProps> = ({
       key: "profile",
       icon: <UserOutlined />,
       label: "Profile",
-      onClick: () => console.log("Profile clicked"),
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
       onClick: () => router.push(SETTINGS_PATH_BY_ROLE[role]),
+
     },
     {
       type: "divider" as const,
@@ -180,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({
             <SearchOutlined className="text-xl" />
           </button>
 
-          <Dropdown
+          {/* <Dropdown
             menu={{ items: notificationItems }}
             trigger={["click"]}
             placement="bottomRight"
@@ -190,7 +190,7 @@ const Header: React.FC<HeaderProps> = ({
                 <BellOutlined className="text-xl" />
               </Badge>
             </button>
-          </Dropdown>
+          </Dropdown> */}
 
           <Dropdown
             menu={{ items: userMenuItems }}
@@ -206,9 +206,10 @@ const Header: React.FC<HeaderProps> = ({
               </div>
               <Avatar
                 size={40}
-                icon={<UserOutlined />}
-                className="bg-blue-500"
-              />
+                className="!bg-primaryColor !text-white font-semibold"
+              >
+                {avatarInitial}
+              </Avatar>
             </button>
           </Dropdown>
         </div>

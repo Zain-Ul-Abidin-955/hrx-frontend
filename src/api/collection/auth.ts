@@ -10,8 +10,13 @@ import type {
   VerifyEmailPayload,
 } from "@/types/auth";
 
-export const userLogin = async (formData: LoginPayload): Promise<LoginResponse> => {
-  const response = await axiosInstance.post<LoginResponse>("/auth/login", formData);
+export const userLogin = async (
+  formData: LoginPayload,
+): Promise<LoginResponse> => {
+  const response = await axiosInstance.post<LoginResponse>(
+    "/auth/login",
+    formData,
+  );
   return response.data;
 };
 
@@ -28,10 +33,25 @@ export const forgotPassword = async (formData: ForgotPasswordPayload) => {
 //   return response.data;
 // };
 
-// export const resendOtp = async (formData: ResendOtpPayload) => {
-//   const response = await axiosInstance.post("/admin/auth/resendOtp", formData);
-//   return response.data;
-// };
+export const setPassword = async (
+  formData: SetPasswordPayload,
+): Promise<SetPasswordResponse> => {
+  const response = await axiosInstance.post<SetPasswordResponse>(
+    "/auth/org-admin/set-password",
+    formData,
+  );
+  return response.data;
+};
+
+export const setEmployeePassword = async (
+  formData: SetPasswordPayload,
+): Promise<SetPasswordResponse> => {
+  const response = await axiosInstance.post<SetPasswordResponse>(
+    "/auth/employee/set-password",
+    formData,
+  );
+  return response.data;
+};
 
 export const resetPassword = async (
   formData: ResetPasswordPayload,
