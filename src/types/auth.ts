@@ -25,6 +25,12 @@ export interface ForgotPasswordPayload {
   email: string;
 }
 
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  password: string;
+}
+
 export interface SetPasswordPayload {
   setup_token: string;
   password: string;

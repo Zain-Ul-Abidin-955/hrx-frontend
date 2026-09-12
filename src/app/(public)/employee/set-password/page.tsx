@@ -1,55 +1,55 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { Form, Button, message } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { resetPassword } from "@/api/collection/auth";
+import { setEmployeePassword } from "@/api/collection/auth";
 import CustomInput from "@/components/input/CustomInput";
 
-interface ResetPasswordFormValues {
+interface SetPasswordFormValues {
   password: string;
   confirmPassword: string;
 }
 
-const ResetPassword: React.FC = () => {
-  const [form] = Form.useForm<ResetPasswordFormValues>();
+function SetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [form] = Form.useForm<SetPasswordFormValues>();
 
-  const { mutate: submitReset, isPending } = useMutation({
-    mutationFn: resetPassword,
+  const setupToken =
+    searchParams.get("token") ?? searchParams.get("setup_token") ?? "";
+
+  const { mutate: submitPassword, isPending } = useMutation({
+    mutationFn: setEmployeePassword,
   });
 
-  const onFinish = (values: ResetPasswordFormValues) => {
-    const email = localStorage.getItem("email");
-    const otp = localStorage.getItem("otp");
-
-    if (!email || !otp) {
-      message.error("Reset session expired. Please request a new OTP.");
-      router.push("/forgot-password");
+  const onFinish = (values: SetPasswordFormValues) => {
+    if (!setupToken) {
+      message.error(
+        "Invalid or missing setup token. Please use the link from your email.",
+      );
       return;
     }
 
-    submitReset(
+    submitPassword(
       {
-        email,
-        otp,
+        setup_token: setupToken,
         password: values.password,
       },
       {
         onSuccess: (data) => {
-          localStorage.clear();
-          message.success(data.message ?? "Password reset successfully.");
+          message.success(data.message ?? "Password set successfully!");
           router.push("/login");
         },
         onError: (error) => {
           const errorMessage = isAxiosError(error)
-            ? (error.response?.data as { detail?: string })?.detail ||
-              "Failed to reset password. Please try again."
-            : "Failed to reset password. Please try again.";
+            ? (error.response?.data as { message?: string })?.message ||
+              "Failed to set password. Please try again."
+            : "Failed to set password. Please try again.";
           message.error(errorMessage);
         },
       },
@@ -59,13 +59,21 @@ const ResetPassword: React.FC = () => {
   return (
     <div className="w-full max-w-[500px] mx-auto px-4 sm:px-6 lg:px-0">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Reset Password</h1>
-        <p className="text-gray-600">Create a new password for your account</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Set Password</h1>
+        <p className="text-gray-600">
+          Create a password for your employee account
+        </p>
       </div>
+
+      {!setupToken && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          Setup token is missing. Please open the link sent to your email.
+        </div>
+      )}
 
       <Form
         form={form}
-        name="reset-password"
+        name="set-password"
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
@@ -74,9 +82,9 @@ const ResetPassword: React.FC = () => {
       >
         <CustomInput
           name="password"
-          label="New Password"
+          label="Password"
           type="password"
-          placeholder="Enter new password"
+          placeholder="Enter your password"
           icon={<LockOutlined />}
           hasFeedback
         />
@@ -85,7 +93,7 @@ const ResetPassword: React.FC = () => {
           name="confirmPassword"
           label="Confirm Password"
           type="password"
-          placeholder="Confirm new password"
+          placeholder="Confirm your password"
           icon={<LockOutlined />}
           dependencies={["password"]}
           hasFeedback
@@ -108,9 +116,10 @@ const ResetPassword: React.FC = () => {
             htmlType="submit"
             size="large"
             loading={isPending}
+            disabled={!setupToken}
             className="w-full !bg-primaryColor border-0 rounded-lg h-12 font-medium"
           >
-            {isPending ? "Updating..." : "Update Password"}
+            {isPending ? "Setting password..." : "Set Password"}
           </Button>
         </Form.Item>
       </Form>
@@ -118,13 +127,23 @@ const ResetPassword: React.FC = () => {
       <div className="mt-6 text-center">
         <Link
           href="/login"
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-primaryColor hover:text-primaryColor/80 font-medium"
         >
           Back to Login
         </Link>
       </div>
     </div>
   );
+}
+
+const SetPasswordPage: React.FC = () => {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-offWhiteColor py-12">
+      <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+        <SetPasswordForm />
+      </Suspense>
+    </div>
+  );
 };
 
-export default ResetPassword;
+export default SetPasswordPage;

@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { Form, Input, Button } from "antd";
+import { Form, Button } from "antd";
+import { SafetyOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import CustomInput from "@/components/input/CustomInput";
 
 interface VerifyOtpFormValues {
   otp: string;
@@ -16,11 +18,10 @@ const VerifyOtp: React.FC = () => {
 
   const onFinish = (values: VerifyOtpFormValues) => {
     setLoading(true);
-    localStorage.setItem("verifiedOtp", values.otp);
-
+    localStorage.setItem("otp", values.otp);
     setTimeout(() => {
       setLoading(false);
-      router.push("/auth/reset-password");
+      router.push("/reset-password");
     }, 1000);
   };
 
@@ -37,24 +38,24 @@ const VerifyOtp: React.FC = () => {
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
+        requiredMark={false}
         className="space-y-4"
       >
-        <Form.Item
-          label={<span className="text-gray-700 font-medium">OTP Code</span>}
+        <CustomInput
           name="otp"
+          label="OTP Code"
+          placeholder="Enter 6-digit OTP"
+          icon={<SafetyOutlined />}
+          maxLength={6}
           rules={[
             { required: true, message: "Please enter OTP!" },
             { len: 6, message: "OTP must be 6 digits!" },
+            {
+              pattern: /^\d{6}$/,
+              message: "OTP must contain only numbers!",
+            },
           ]}
-        >
-          <div className="flex justify-center">
-            <Input.OTP
-              length={6}
-              size="large"
-              formatter={(str) => str.replace(/\D/g, "")}
-            />
-          </div>
-        </Form.Item>
+        />
 
         <Form.Item className="mb-0">
           <Button
@@ -71,7 +72,7 @@ const VerifyOtp: React.FC = () => {
 
       <div className="mt-6 text-center">
         <Link
-          href="/auth/forgot-password"
+          href="/forgot-password"
           className="text-blue-600 hover:text-blue-700 font-medium"
         >
           Resend OTP

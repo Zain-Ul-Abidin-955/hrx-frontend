@@ -37,6 +37,7 @@ function MyTable<T extends object>({
   columns,
   dataSource = [],
   scroll,
+  className,
   ...tableProps
 }: MyTableProps<T>) {
   const [searchText, setSearchText] = useState("");
@@ -122,6 +123,7 @@ function MyTable<T extends object>({
         dataSource={paginatedData}
         pagination={false}
         scroll={scroll ?? { x: 1200 }}
+        className={`[&_.ant-table-thead>tr>th]:!bg-primaryColor [&_.ant-table-thead>tr>th]:!text-whiteColor [&_.ant-table-thead>tr>th]:!border-primaryColor ${className ?? ""}`}
         {...tableProps}
       />
 

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { Form, Input, Button, message } from "antd";
+import { Form, Button, message } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { setPassword } from "@/api/collection/auth";
+import CustomInput from "@/components/input/CustomInput";
 
 interface SetPasswordFormValues {
   password: string;
@@ -28,7 +29,9 @@ function SetPasswordForm() {
 
   const onFinish = (values: SetPasswordFormValues) => {
     if (!setupToken) {
-      message.error("Invalid or missing setup token. Please use the link from your email.");
+      message.error(
+        "Invalid or missing setup token. Please use the link from your email.",
+      );
       return;
     }
 
@@ -57,7 +60,9 @@ function SetPasswordForm() {
     <div className="w-full max-w-[500px] mx-auto px-4 sm:px-6 lg:px-0">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Set Password</h1>
-        <p className="text-gray-600">Create a password for your organization account</p>
+        <p className="text-gray-600">
+          Create a password for your organization account
+        </p>
       </div>
 
       {!setupToken && (
@@ -72,30 +77,24 @@ function SetPasswordForm() {
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
+        requiredMark={false}
         className="space-y-4"
       >
-        <Form.Item
-          label={<span className="text-gray-700 font-medium">Password</span>}
+        <CustomInput
           name="password"
-          rules={[
-            { required: true, message: "Please enter your password!" },
-            { min: 6, message: "Password must be at least 6 characters!" },
-          ]}
+          label="Password"
+          type="password"
+          placeholder="Enter your password"
+          icon={<LockOutlined />}
           hasFeedback
-        >
-          <Input.Password
-            prefix={<LockOutlined className="text-gray-400" />}
-            placeholder="Enter your password"
-            size="large"
-            className="rounded-lg"
-          />
-        </Form.Item>
+        />
 
-        <Form.Item
-          label={
-            <span className="text-gray-700 font-medium">Confirm Password</span>
-          }
+        <CustomInput
           name="confirmPassword"
+          label="Confirm Password"
+          type="password"
+          placeholder="Confirm your password"
+          icon={<LockOutlined />}
           dependencies={["password"]}
           hasFeedback
           rules={[
@@ -109,14 +108,7 @@ function SetPasswordForm() {
               },
             }),
           ]}
-        >
-          <Input.Password
-            prefix={<LockOutlined className="text-gray-400" />}
-            placeholder="Confirm your password"
-            size="large"
-            className="rounded-lg"
-          />
-        </Form.Item>
+        />
 
         <Form.Item className="mb-0">
           <Button

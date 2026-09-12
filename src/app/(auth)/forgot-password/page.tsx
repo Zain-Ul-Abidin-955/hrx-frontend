@@ -1,27 +1,45 @@
 "use client";
 
 import React from "react";
-import { Form, Input, Button } from "antd";
+import { Form, Button, message } from "antd";
 import { MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
+import { forgotPassword } from "@/api/collection/auth";
+import CustomInput from "@/components/input/CustomInput";
 
 interface ForgotPasswordFormValues {
   email: string;
 }
 
 const ForgotPassword: React.FC = () => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
+  const [form] = Form.useForm<ForgotPasswordFormValues>();
   const router = useRouter();
 
+  const { mutate: requestOtp, isPending } = useMutation({
+    mutationFn: forgotPassword,
+  });
+
   const onFinish = (values: ForgotPasswordFormValues) => {
-    setLoading(true);
-    localStorage.setItem("resetEmail", values.email);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/auth/verify-otp");
-    }, 1000);
+    requestOtp(
+      { email: values.email },
+      {
+        onSuccess: (data) => {
+          localStorage.setItem("email", values.email);
+          message.success(data.message ?? "OTP sent successfully.");
+          router.push("/verify-otp");
+        },
+        onError: (error) => {
+          const errorMessage = isAxiosError(error)
+            ? (error.response?.data as { detail?: string })?.detail ||
+              "Failed to send OTP. Please try again."
+            : "Failed to send OTP. Please try again.";
+          message.error(errorMessage);
+        },
+      },
+    );
   };
 
   return (
@@ -39,39 +57,35 @@ const ForgotPassword: React.FC = () => {
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
+        requiredMark={false}
         className="space-y-4"
       >
-        <Form.Item
-          label={<span className="text-gray-700 font-medium">Email</span>}
+        <CustomInput
           name="email"
-          rules={[
-            { required: true, message: "Please enter your email!" },
-            { type: "email", message: "Please enter a valid email!" },
-          ]}
-        >
-          <Input
-            prefix={<MailOutlined className="text-gray-400" />}
-            placeholder="Enter your email"
-            size="large"
-            className="rounded-lg"
-          />
-        </Form.Item>
+          label="Email"
+          type="email"
+          placeholder="Enter your email"
+          icon={<MailOutlined />}
+        />
 
         <Form.Item className="mb-0">
           <Button
             type="primary"
             htmlType="submit"
             size="large"
-            loading={loading}
+            loading={isPending}
             className="w-full !bg-primaryColor border-0 rounded-lg h-12 font-medium"
           >
-            {loading ? "Sending OTP..." : "Send OTP"}
+            {isPending ? "Sending OTP..." : "Send OTP"}
           </Button>
         </Form.Item>
       </Form>
 
       <div className="mt-6 text-center">
-        <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
+        <Link
+          href="/login"
+          className="text-blue-600 hover:text-blue-700 font-medium"
+        >
           Back to Login
         </Link>
       </div>

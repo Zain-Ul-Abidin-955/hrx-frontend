@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { Form, Input, Button, message } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Form, Button, message } from "antd";
+import { UserOutlined, LockOutlined, HomeOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { userLogin } from "@/api/collection/auth";
 import type { LoginPayload } from "@/types/auth";
+import CustomInput from "@/components/input/CustomInput";
 
 interface LoginFormValues extends LoginPayload {
   remember?: boolean;
@@ -36,10 +37,11 @@ const Login: React.FC = () => {
             message.error("Login failed: role not found in response.");
             return;
           }
-
           if (role === "superadmin") {
             router.push("/superadmin/dashboard");
-          } else if (role === "org_admin" || role === "org_hr" || role === "org_employee") {
+          } else if (role === "employee") {
+            router.push("/employee/dashboard");
+          } else if (role === "org_admin" || role === "hr_manager") {
             router.push("/orgnization/dashboard");
           } else {
             router.push("/login");
@@ -49,7 +51,7 @@ const Login: React.FC = () => {
         onError: (error) => {
           const errorMessage = isAxiosError(error)
             ? (error.response?.data as { message?: string })?.message ||
-              "Invalid email or password. Please try again."
+            "Invalid email or password. Please try again."
             : "Invalid email or password. Please try again.";
           message.error(errorMessage);
         },
@@ -60,8 +62,15 @@ const Login: React.FC = () => {
   return (
     <div className="w-full max-w-[500px] mx-auto px-4 sm:px-6 lg:px-0">
       <div className="mb-8 text-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full border border-grayLightColor/60 bg-whiteColor text-secondaryTextColor text-sm font-medium hover:border-primaryColor/40 hover:text-primaryColor transition-colors"
+        >
+          <HomeOutlined />
+          Go to Home
+        </Link>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-        <p className="text-gray-600">Sign in to your account</p>
+        <p className="text-gray-600">Login to your account</p>
       </div>
 
       <Form
@@ -70,45 +79,31 @@ const Login: React.FC = () => {
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
+        requiredMark={false}
         className="space-y-4"
       >
-        <Form.Item
-          label={<span className="text-gray-700 font-medium">Email</span>}
+        <CustomInput
           name="email"
-          rules={[
-            { required: true, message: "Please input your email!" },
-            { type: "email", message: "Please enter a valid email!" },
-          ]}
-        >
-          <Input
-            prefix={<UserOutlined className="text-gray-400" />}
-            placeholder="Enter your email"
-            size="large"
-            className="rounded-lg"
-          />
-        </Form.Item>
+          label="Email"
+          type="email"
+          placeholder="Enter your email"
+          icon={<UserOutlined />}
+        />
 
-        <Form.Item
-          label={<span className="text-gray-700 font-medium">Password</span>}
+        <CustomInput
           name="password"
-          rules={[
-            { required: true, message: "Please input your password!" },
-            { min: 6, message: "Password must be at least 6 characters!" },
-          ]}
-        >
-          <Input.Password
-            prefix={<LockOutlined className="text-gray-400" />}
-            placeholder="Enter your password"
-            size="large"
-            className="rounded-lg"
-          />
-        </Form.Item>
+          label="Password"
+          type="password"
+          placeholder="Enter your password"
+          icon={<LockOutlined />}
+          strengthCheck={false}
+        />
 
         <Form.Item name="remember" valuePropName="checked" className="mb-4">
           <div className="flex items-center justify-end">
             <Link
               href="/forgot-password"
-              className="text-primaryColor hover:text-primaryColor/80 text-sm"
+              className="!text-primaryColor !underline text-sm"
             >
               Forgot password?
             </Link>

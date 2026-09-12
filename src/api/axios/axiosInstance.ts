@@ -6,12 +6,30 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
+function isAuthFailure(error: unknown): boolean {
+  const err = error as {
+    response?: { status?: number; data?: { detail?: unknown; message?: string } };
+  };
+  const status = err?.response?.status;
+  if (status === 401) return true;
+
+  // Some backends still use 403 for missing/invalid auth — only treat those as logout.
+  if (status !== 403) return false;
+
+  const detail = err?.response?.data?.detail ?? err?.response?.data?.message ?? "";
+  const text = Array.isArray(detail)
+    ? detail.map((d) => (typeof d === "string" ? d : d?.msg)).join(" ")
+    : String(detail);
+
+  return /not authenticated|unauthori[sz]ed|invalid token|expired|credentials|session/i.test(
+    text,
+  );
+}
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error?.response?.status;
-
-    if (status === 403) {
+    if (isAuthFailure(error)) {
       message.error("Session expired. Please log in again.");
       window.location.href = "/login";
     }

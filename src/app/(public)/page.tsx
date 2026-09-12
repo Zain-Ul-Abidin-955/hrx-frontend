@@ -215,7 +215,7 @@ const LandingPage: React.FC = () => {
             <Button
               size="large"
               onClick={() => router.push("/login")}
-              className="!border-whiteColor !text-whiteColor hover:!bg-whiteColor/10 h-12 px-8 font-medium"
+              className="!border-whiteColor !text-whiteColor !bg-primaryColor h-12 px-8 font-medium"
             >
               Login to Your Account
             </Button>
@@ -224,7 +224,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-blackColor text-whiteColor py-12 px-4 sm:px-6 lg:px-8">
+      {/* <footer className="bg-blackColor text-whiteColor py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="md:col-span-1">
@@ -355,7 +355,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 };

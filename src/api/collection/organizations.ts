@@ -3,7 +3,7 @@ import type {
   CreateOrganizationPayload,
   Organization,
   OrganizationApplication,
-  OrganizationApplicationStatus,
+  UpdateOrganizationPayload,
 } from "@/types/organization";
 
 // Create organization application
@@ -29,28 +29,51 @@ export const getOrganizationsApplications = async (): Promise<
 
 export const approveOrganizationApplication = async (
   id: string,
-): Promise<Organization> => {
-  const response = await axiosInstance.put<Organization>(
+): Promise<OrganizationApplication> => {
+  const response = await axiosInstance.put<OrganizationApplication>(
     `/organizations/applications/${id}/approve`,
   );
   return response.data;
-};
+};  
 
 export const rejectOrganizationApplication = async (
   id: string,
-): Promise<Organization> => {
-  const response = await axiosInstance.get<Organization>(
-    `/organizations/applications/${id}/reject`,
+): Promise<OrganizationApplication> => {
+  const response = await axiosInstance.put<OrganizationApplication>(
+    `/organizations/applications/${id}/discard`,
   );
   return response.data;
 };
 
-export const updateOrganizationApplicationStatus = async (
+// Get all organizations
+export const getOrganizations = async (): Promise<Organization[]> => {
+  const response = await axiosInstance.get<Organization[]>(
+    `/organizations`,
+  );
+  return response.data;
+};
+
+// Get organization by id
+export const getOrganizationById = async (id: string): Promise<Organization> => {
+  const response = await axiosInstance.get<Organization>(
+    `/organizations/${id}`,
+  );
+  return response.data;
+};
+
+// Update organization
+export const updateOrganization = async (
   id: string,
-  status: Extract<OrganizationApplicationStatus, "approved" | "rejected">,
+  organizationData: UpdateOrganizationPayload,
 ): Promise<Organization> => {
-  if (status === "approved") {
-    return approveOrganizationApplication(id);
-  }
-  return rejectOrganizationApplication(id);
+  const response = await axiosInstance.put<Organization>(
+    `/organizations/${id}`,
+    organizationData,
+  );
+  return response.data;
+};
+
+// Delete organization
+export const deleteOrganization = async (id: string): Promise<void> => {
+  await axiosInstance.delete(`/organizations/${id}`);
 };

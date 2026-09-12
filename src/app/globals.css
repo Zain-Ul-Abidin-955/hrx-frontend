@@ -17,3 +17,18 @@
 }
 
 @tailwind utilities;
+
+.attendance-action-btn.ant-btn-primary:disabled,
+.attendance-action-btn.ant-btn-primary.ant-btn-disabled {
+  color: #ffffff !important;
+  background-color: color-mix(in srgb, var(--color-primaryColor) 70%, white) !important;
+  border-color: transparent !important;
+  opacity: 1 !important;
+}
+
+.attendance-action-btn.ant-btn-primary:disabled span,
+.attendance-action-btn.ant-btn-primary.ant-btn-disabled span,
+.attendance-action-btn.ant-btn-primary:disabled .anticon,
+.attendance-action-btn.ant-btn-primary.ant-btn-disabled .anticon {
+  color: #ffffff !important;
+}
