@@ -10,6 +10,7 @@ import { isAxiosError } from "axios";
 import { userLogin } from "@/api/collection/auth";
 import type { LoginPayload } from "@/types/auth";
 import CustomInput from "@/components/input/CustomInput";
+import { getDashboardPath } from "@/utils/authRoutes";
 
 interface LoginFormValues extends LoginPayload {
   remember?: boolean;
@@ -37,15 +38,12 @@ const Login: React.FC = () => {
             message.error("Login failed: role not found in response.");
             return;
           }
-          if (role === "superadmin") {
-            router.push("/superadmin/dashboard");
-          } else if (role === "employee") {
-            router.push("/employee/dashboard");
-          } else if (role === "org_admin" || role === "hr_manager") {
-            router.push("/orgnization/dashboard");
-          } else {
+          const dashboardPath = getDashboardPath(role);
+          if (!dashboardPath) {
             router.push("/login");
+            return;
           }
+          router.push(dashboardPath);
           message.success(data.message ?? "Login successful!");
         },
         onError: (error) => {

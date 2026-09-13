@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "antd";
 import {
   RobotOutlined,
@@ -15,6 +15,8 @@ import {
 import { useRouter } from "next/navigation";
 import LandingHeader from "./components/LandingHeader";
 import LandingSignupForm from "./components/LandingSignupForm";
+import useUserStore from "@/store/userStore";
+import { getDashboardPath } from "@/utils/authRoutes";
 
 const FEATURE_ICON_COLORS = [
   "text-primaryColor",
@@ -27,6 +29,16 @@ const FEATURE_ICON_COLORS = [
 
 const LandingPage: React.FC = () => {
   const router = useRouter();
+  const user = useUserStore((state) => state.user);
+  const loading = useUserStore((state) => state.loading);
+  const sessionChecked = useUserStore((state) => state.sessionChecked);
+  const checkSession = useUserStore((state) => state.checkSession);
+  const dashboardPath = getDashboardPath(user?.role);
+  const isSessionLoading = loading || !sessionChecked;
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   const features = [
     {
@@ -84,7 +96,10 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen mx-auto bg-offWhiteColor">
-      <LandingHeader />
+      <LandingHeader
+        dashboardPath={dashboardPath}
+        isSessionLoading={isSessionLoading}
+      />
 
       {/* Hero Section */}
       <section className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
@@ -114,14 +129,51 @@ const LandingPage: React.FC = () => {
               <Button
                 type="primary"
                 size="large"
-                onClick={() => router.push("/login")}
+                loading={isSessionLoading}
+                onClick={() =>
+                  router.push(dashboardPath ?? "/login")
+                }
                 className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90 h-12 px-8"
               >
-                Login to Your Account
+                {isSessionLoading
+                  ? "Checking session"
+                  : dashboardPath
+                    ? "Go to Dashboard"
+                    : "Login to Your Account"}
               </Button>
             </div>
 
-            <LandingSignupForm id="landing-signup" />
+            {isSessionLoading ? (
+              <div className="flex min-h-96 items-center justify-center rounded-2xl border border-grayLightColor/40 bg-whiteColor p-8 shadow-xl">
+                <Button loading type="text" size="large">
+                  Checking your session
+                </Button>
+              </div>
+            ) : dashboardPath ? (
+              <div className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-primaryColor/20 bg-whiteColor p-8 text-center shadow-xl">
+                <DashboardOutlined className="mb-5 text-6xl text-primaryColor" />
+                <h2 className="mb-3 text-3xl font-bold text-blackColor">
+                  Welcome back
+                </h2>
+                <p className="mb-2 text-grayColor">
+                  You are signed in{user?.email ? ` as ${user.email}` : ""}.
+                </p>
+                <p className="mb-7 text-sm text-grayColor">
+                  Continue to your HRX workspace to manage your organization.
+                </p>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<DashboardOutlined />}
+                  onClick={() => router.push(dashboardPath)}
+                  className="!bg-primaryColor !border-primaryColor h-12 px-8"
+                >
+                  Open Dashboard
+                </Button>
+              </div>
+            ) : (
+              <LandingSignupForm id="landing-signup" />
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-16 border-t border-grayLightColor/40">
@@ -200,25 +252,43 @@ const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              type="primary"
-              size="large"
-              onClick={() =>
-                document
-                  .getElementById("landing-signup")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
-              className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
-            >
-              Get Started Free
-            </Button>
-            <Button
-              size="large"
-              onClick={() => router.push("/login")}
-              className="!border-whiteColor !text-whiteColor !bg-primaryColor h-12 px-8 font-medium"
-            >
-              Login to Your Account
-            </Button>
+            {isSessionLoading ? (
+              <Button type="primary" size="large" loading disabled>
+                Checking session
+              </Button>
+            ) : dashboardPath ? (
+              <Button
+                type="primary"
+                size="large"
+                icon={<DashboardOutlined />}
+                onClick={() => router.push(dashboardPath)}
+                className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
+              >
+                Go to Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() =>
+                    document
+                      .getElementById("landing-signup")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
+                >
+                  Get Started Free
+                </Button>
+                <Button
+                  size="large"
+                  onClick={() => router.push("/login")}
+                  className="!border-whiteColor !text-whiteColor !bg-primaryColor h-12 px-8 font-medium"
+                >
+                  Login to Your Account
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
