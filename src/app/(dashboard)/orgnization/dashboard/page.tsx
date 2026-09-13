@@ -1,120 +1,219 @@
 "use client";
 import React from "react";
-import { Card, Row, Col, Progress, Tag, Avatar, Button, Table } from "antd";
+import Link from "next/link";
+import { Button, Table, Tag, Tooltip } from "antd";
 import {
-  UserOutlined,
   TeamOutlined,
-  CalendarOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
-  RiseOutlined,
-  FallOutlined,
-  FileTextOutlined,
-  TrophyOutlined,
+  CalendarOutlined,
+  UserAddOutlined,
+  ClockCircleOutlined,
+  ApartmentOutlined,
+  FileSearchOutlined,
+  SendOutlined,
+  PlusOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
+import Panel from "@/components/dashboard/Panel";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
+import useUserStore from "@/store/userStore";
+import { getUserDisplayName } from "@/utils/profileHelpers";
+
+/* -------------------------------------------------------------------------- */
+/* Mock data — this page is not wired to the API yet.                          */
+/* -------------------------------------------------------------------------- */
+
+const STATS: StatTileProps[] = [
+  {
+    label: "Total employees",
+    value: "248",
+    delta: "+12%",
+    direction: "up",
+    caption: "vs last month",
+    icon: <TeamOutlined />,
+  },
+  {
+    label: "Present today",
+    value: "234",
+    delta: "+1.8%",
+    direction: "up",
+    caption: "94.4% attendance rate",
+    icon: <CheckCircleOutlined />,
+    meter: 94.4,
+  },
+  {
+    label: "On leave",
+    value: "14",
+    delta: "-3%",
+    direction: "down",
+    caption: "vs last month",
+    icon: <CalendarOutlined />,
+  },
+  {
+    label: "New hires",
+    value: "8",
+    delta: "+25%",
+    direction: "up",
+    caption: "vs last month",
+    icon: <UserAddOutlined />,
+  },
+];
+
+const MONTHLY_APPLICATIONS = [
+  { month: "Jan", count: 148 },
+  { month: "Feb", count: 196 },
+  { month: "Mar", count: 172 },
+  { month: "Apr", count: 241 },
+  { month: "May", count: 218 },
+  { month: "Jun", count: 287 },
+  { month: "Jul", count: 252 },
+  { month: "Aug", count: 318 },
+  { month: "Sep", count: 231 },
+  { month: "Oct", count: 276 },
+  { month: "Nov", count: 203 },
+  { month: "Dec", count: 264 },
+];
+
+const PIPELINE = [
+  { stage: "Screened by AI", count: 412 },
+  { stage: "Shortlisted", count: 96 },
+  { stage: "Interviewing", count: 31 },
+  { stage: "Offer sent", count: 8 },
+];
+
+const DEPARTMENTS = [
+  { name: "Engineering", employees: 85 },
+  { name: "Sales", employees: 62 },
+  { name: "Marketing", employees: 48 },
+  { name: "HR", employees: 28 },
+  { name: "Finance", employees: 25 },
+];
+
+const ACTIVITIES = [
+  {
+    id: 1,
+    user: "John Doe",
+    action: "submitted a leave request",
+    time: "5 mins ago",
+  },
+  {
+    id: 2,
+    user: "Sarah Smith",
+    action: "completed onboarding",
+    time: "15 mins ago",
+  },
+  {
+    id: 3,
+    user: "Mike Johnson",
+    action: "checked in at 9:00 AM",
+    time: "1 hour ago",
+  },
+  {
+    id: 4,
+    user: "Emma Wilson",
+    action: "updated profile information",
+    time: "2 hours ago",
+  },
+];
+
+interface LeaveRow {
+  key: string;
+  employee: string;
+  department: string;
+  leaveType: "Vacation" | "Sick" | "Personal";
+  duration: string;
+  status: "Pending" | "Approved" | "Rejected";
+}
+
+const LEAVE_REQUESTS: LeaveRow[] = [
+  {
+    key: "1",
+    employee: "Robert Fox",
+    department: "Engineering",
+    leaveType: "Vacation",
+    duration: "Dec 20–25 (5 days)",
+    status: "Pending",
+  },
+  {
+    key: "2",
+    employee: "Jane Cooper",
+    department: "Marketing",
+    leaveType: "Sick",
+    duration: "Dec 18 (1 day)",
+    status: "Approved",
+  },
+  {
+    key: "3",
+    employee: "Wade Warren",
+    department: "Sales",
+    leaveType: "Personal",
+    duration: "Dec 22–23 (2 days)",
+    status: "Pending",
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Shared pieces                                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Greeting that matches the time of day the user actually opened the page. */
+function greetingFor(date: Date): string {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 const Dashboard: React.FC = () => {
-  // Stats data
-  const statsCards = [
-    {
-      title: "Total Employees",
-      value: "248",
-      change: "+12%",
-      changeType: "increase",
-      icon: <TeamOutlined className="text-3xl" />,
-      color: "bg-blue-500",
-      bgLight: "bg-blue-50",
-      textColor: "text-blue-600",
-    },
-    {
-      title: "Present Today",
-      value: "234",
-      change: "94.4%",
-      changeType: "increase",
-      icon: <CheckCircleOutlined className="text-3xl" />,
-      color: "bg-green-500",
-      bgLight: "bg-green-50",
-      textColor: "text-green-600",
-    },
-    {
-      title: "On Leave",
-      value: "14",
-      change: "-3%",
-      changeType: "decrease",
-      icon: <CalendarOutlined className="text-3xl" />,
-      color: "bg-orange-500",
-      bgLight: "bg-orange-50",
-      textColor: "text-orange-600",
-    },
-    {
-      title: "New Hires",
-      value: "8",
-      change: "+25%",
-      changeType: "increase",
-      icon: <UserOutlined className="text-3xl" />,
-      color: "bg-purple-500",
-      bgLight: "bg-purple-50",
-      textColor: "text-purple-600",
-    },
-  ];
+  const user = useUserStore((state) => state.user);
+  const firstName = getUserDisplayName(user).split(" ")[0];
 
-  // Recent activities
-  const recentActivities = [
-    {
-      id: 1,
-      user: "John Doe",
-      action: "submitted a leave request",
-      time: "5 mins ago",
-      type: "leave",
-    },
-    {
-      id: 2,
-      user: "Sarah Smith",
-      action: "completed onboarding",
-      time: "15 mins ago",
-      type: "onboarding",
-    },
-    {
-      id: 3,
-      user: "Mike Johnson",
-      action: "checked in at 9:00 AM",
-      time: "1 hour ago",
-      type: "attendance",
-    },
-    {
-      id: 4,
-      user: "Emma Wilson",
-      action: "updated profile information",
-      time: "2 hours ago",
-      type: "profile",
-    },
-  ];
+  // Rendered client-side only, so local time is the user's own.
+  const [now, setNow] = React.useState<Date | null>(null);
+  React.useEffect(() => setNow(new Date()), []);
 
-  // Leave requests table data
-  const leaveRequestsColumns = [
+  const peakMonth = MONTHLY_APPLICATIONS.reduce((a, b) =>
+    b.count > a.count ? b : a,
+  );
+  const chartMax = Math.ceil(peakMonth.count / 80) * 80;
+  const pipelineMax = PIPELINE[0].count;
+  const totalHeadcount = DEPARTMENTS.reduce((sum, d) => sum + d.employees, 0);
+
+  const leaveColumns = [
     {
       title: "Employee",
       dataIndex: "employee",
       key: "employee",
-      render: (text: string, record: any) => (
-        <div className="flex items-center space-x-3">
-          <Avatar icon={<UserOutlined />} className="!mr-2" />
-          <div>
-            <p className="font-medium text-gray-800">{text}</p>
-            <p className="text-xs text-gray-500">{record.department}</p>
+      render: (text: string, record: LeaveRow) => (
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accentColor/10 text-xs font-semibold text-accentDeepColor">
+            {text.charAt(0)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-blackColor">
+              {text}
+            </p>
+            <p className="truncate text-xs text-darkGrayColor">
+              {record.department}
+            </p>
           </div>
         </div>
       ),
     },
     {
-      title: "Leave Type",
+      title: "Leave type",
       dataIndex: "leaveType",
       key: "leaveType",
-      render: (type: string) => (
+      render: (type: LeaveRow["leaveType"]) => (
         <Tag
+          variant="filled"
+          className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
           color={
-            type === "Sick" ? "red" : type === "Vacation" ? "blue" : "orange"
+            type === "Sick"
+              ? "magenta"
+              : type === "Vacation"
+                ? "geekblue"
+                : "cyan"
           }
         >
           {type}
@@ -125,19 +224,24 @@ const Dashboard: React.FC = () => {
       title: "Duration",
       dataIndex: "duration",
       key: "duration",
+      render: (text: string) => (
+        <span className="text-sm text-secondaryTextColor">{text}</span>
+      ),
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => (
+      render: (status: LeaveRow["status"]) => (
         <Tag
+          variant="filled"
+          className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
           color={
             status === "Approved"
-              ? "green"
+              ? "success"
               : status === "Pending"
-              ? "orange"
-              : "red"
+                ? "warning"
+                : "error"
           }
         >
           {status}
@@ -145,14 +249,15 @@ const Dashboard: React.FC = () => {
       ),
     },
     {
-      title: "Action",
+      title: "",
       key: "action",
+      align: "right" as const,
       render: () => (
-        <div className="space-x-2">
-          <Button type="primary" size="small" className="bg-green-500">
+        <div className="flex justify-end gap-2">
+          <Button size="small" type="primary">
             Approve
           </Button>
-          <Button danger size="small">
+          <Button size="small" danger>
             Reject
           </Button>
         </div>
@@ -160,286 +265,300 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const leaveRequestsData = [
-    {
-      key: "1",
-      employee: "Robert Fox",
-      department: "Engineering",
-      leaveType: "Vacation",
-      duration: "Dec 20-25 (5 days)",
-      status: "Pending",
-    },
-    {
-      key: "2",
-      employee: "Jane Cooper",
-      department: "Marketing",
-      leaveType: "Sick",
-      duration: "Dec 18 (1 day)",
-      status: "Approved",
-    },
-    {
-      key: "3",
-      employee: "Wade Warren",
-      department: "Sales",
-      leaveType: "Personal",
-      duration: "Dec 22-23 (2 days)",
-      status: "Pending",
-    },
-  ];
-
-  // Department stats
-  const departmentStats = [
-    { name: "Engineering", employees: 85, percentage: 34 },
-    { name: "Sales", employees: 62, percentage: 25 },
-    { name: "Marketing", employees: 48, percentage: 19 },
-    { name: "HR", employees: 28, percentage: 11 },
-    { name: "Finance", employees: 25, percentage: 11 },
-  ];
-
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-primaryColor rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          Welcome back, HR Manager! 👋
-        </h1>
-        <p className="text-blue-100 text-lg">
-          Here&apos;s what&apos;s happening with your workforce today
-        </p>
+    <div className="space-y-5">
+      {/* ---------- Page header ---------- */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-darkGrayColor">
+            {now
+              ? now.toLocaleDateString(undefined, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })
+              : " "}
+          </p>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-blackColor">
+            {now ? greetingFor(now) : "Welcome back"}
+            {firstName ? `, ${firstName}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-grayColor">
+            Here&apos;s what moved across your workforce today.
+          </p>
+        </div>
+
+        <div className="flex shrink-0 gap-2">
+          <Link href="/orgnization/employees">
+            <Button icon={<PlusOutlined />}>Add employee</Button>
+          </Link>
+          <Link href="/orgnization/recruitment">
+            <Button type="primary" icon={<FileSearchOutlined />}>
+              Post a job
+            </Button>
+          </Link>
+        </div>
+      </header>
+
+      {/* ---------- Stat tiles ---------- */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {STATS.map((stat) => (
+          <StatTile key={stat.label} {...stat} />
+        ))}
       </div>
 
-      {/* Stats Cards */}
-      <Row gutter={[16, 16]}>
-        {statsCards.map((stat, index) => (
-          <Col xs={24} sm={12} lg={6} key={index}>
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm font-medium mb-1">
-                    {stat.title}
-                  </p>
-                  <h3 className="text-3xl font-bold text-gray-800 mb-2">
-                    {stat.value}
-                  </h3>
-                  <div className="flex items-center space-x-1">
-                    {stat.changeType === "increase" ? (
-                      <RiseOutlined className="text-green-500" />
-                    ) : (
-                      <FallOutlined className="text-red-500" />
-                    )}
-                    <span
-                      className={`text-sm font-medium ${
-                        stat.changeType === "increase"
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {stat.change}
-                    </span>
-                    <span className="text-gray-400 text-xs">vs last month</span>
-                  </div>
-                </div>
-                <div className={`${stat.bgLight} p-4 rounded-xl`}>
-                  <div className={stat.textColor}>{stat.icon}</div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* Main Content Grid */}
-      <Row gutter={[16, 16]}>
-        {/* Department Overview */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <div className="flex items-center space-x-2">
-                <TrophyOutlined className="text-blue-600" />
-                <span>Department Overview</span>
-              </div>
-            }
-            className="h-full"
-          >
-            <div className="space-y-4">
-              {departmentStats.map((dept, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-700">
-                      {dept.name}
-                    </span>
-                    <span className="text-gray-600 font-semibold">
-                      {dept.employees} employees
-                    </span>
-                  </div>
-                  <Progress
-                    percent={dept.percentage}
-                    strokeColor={{
-                      "0%": "#3b82f6",
-                      "100%": "#8b5cf6",
+      {/* ---------- Applications + pipeline ---------- */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        {/* Single series over time → one hue, hairline grid, hover for values. */}
+        <Panel
+          className="lg:col-span-3"
+          title="Applications this quarter"
+          icon={<FileSearchOutlined />}
+          action={
+            <span className="rounded-md bg-accentColor/10 px-2 py-1 text-xs font-medium text-accentDeepColor">
+              +24%
+            </span>
+          }
+        >
+          <figure className="m-0">
+            <div className="relative pl-8">
+              {/* y grid */}
+              <div className="absolute inset-y-0 left-0 right-0">
+                {[chartMax, chartMax / 2, 0].map((tick, index) => (
+                  <div
+                    key={tick}
+                    className="absolute left-0 right-0 flex items-center gap-2"
+                    // centred on its gridline, so the 0 tick sits on the baseline
+                    style={{
+                      top: `${index * 50}%`,
+                      transform: "translateY(-50%)",
                     }}
-                    showInfo={false}
-                  />
-                </div>
-              ))}
-            </div>
-          </Card>
-        </Col>
-
-        {/* Recent Activities */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <div className="flex items-center space-x-2">
-                <ClockCircleOutlined className="text-blue-600" />
-                <span>Recent Activities</span>
-              </div>
-            }
-            className="h-full"
-          >
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start space-x-3  p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <Avatar
-                    icon={<UserOutlined />}
-                    className="bg-blue-500 shrink-0 !mr-2"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-semibold text-gray-800">
-                        {activity.user}
-                      </span>{" "}
-                      <span className="text-gray-600">{activity.action}</span>
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {activity.time}
-                    </p>
+                  >
+                    <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-darkGrayColor">
+                      {tick}
+                    </span>
+                    <span className="h-px flex-1 bg-[#ECEEF3]" />
                   </div>
-                </div>
+                ))}
+              </div>
+
+              <div className="relative flex h-44 items-end gap-[3px]">
+                {MONTHLY_APPLICATIONS.map((point) => {
+                  const isPeak = point.month === peakMonth.month;
+                  return (
+                    <Tooltip
+                      key={point.month}
+                      title={`${point.month} · ${point.count} applications`}
+                      color="#161A26"
+                    >
+                      <div className="group relative flex h-full flex-1 cursor-default items-end">
+                        {/* full-height hit area, so hover doesn't need precision */}
+                        <span className="absolute inset-0 rounded-md transition-colors group-hover:bg-accentColor/[0.06]" />
+                        <div
+                          style={{
+                            height: `${(point.count / chartMax) * 100}%`,
+                          }}
+                          className={`relative w-full rounded-t transition-colors ${
+                            isPeak
+                              ? "bg-accentDeepColor"
+                              : "bg-accentColor/70 group-hover:bg-accentDeepColor"
+                          }`}
+                        />
+                      </div>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* x labels, outside the plot box so nothing is clipped */}
+            <div className="mt-2 flex gap-[3px] pl-8">
+              {MONTHLY_APPLICATIONS.map((point) => (
+                <span
+                  key={point.month}
+                  className="flex-1 text-center text-[10px] text-darkGrayColor"
+                >
+                  {point.month}
+                </span>
               ))}
             </div>
-          </Card>
-        </Col>
-      </Row>
 
-      {/* Attendance Overview */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={8}>
-          <Card className="text-center h-full">
-            <div className="space-y-3">
-              <div className="text-green-500 text-4xl">
-                <CheckCircleOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">94.4%</h3>
-              <p className="text-gray-600">Attendance Rate</p>
-              <Progress percent={94.4} strokeColor="#10b981" showInfo={false} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card className="text-center h-full">
-            <div className="space-y-3">
-              <div className="text-orange-500 text-4xl">
-                <CalendarOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">14</h3>
-              <p className="text-gray-600">Pending Leave Requests</p>
-              <Button type="primary" className="mt-2 bg-blue-600">
-                Review Requests
-              </Button>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card className="text-center h-full">
-            <div className="space-y-3">
-              <div className="text-blue-500 text-4xl">
-                <FileTextOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">23</h3>
-              <p className="text-gray-600">Open Positions</p>
-              <Button type="primary" className="mt-2 bg-blue-600">
-                View Positions
-              </Button>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+            <figcaption className="mt-3 text-xs text-grayColor">
+              Peak in{" "}
+              <span className="font-medium text-blackColor">
+                {peakMonth.month} ({peakMonth.count})
+              </span>
+              . Hover a bar for its monthly total.
+            </figcaption>
+          </figure>
 
-      {/* Leave Requests Table */}
-      <Card
-        title={
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <CalendarOutlined className="text-blue-600" />
-              <span>Pending Leave Requests</span>
-            </div>
-            <Button type="link" className="text-blue-600">
-              View All
-            </Button>
+          {/* Table twin — the same values without relying on hover or color. */}
+          <table className="sr-only">
+            <caption>Applications received per month</caption>
+            <tbody>
+              {MONTHLY_APPLICATIONS.map((point) => (
+                <tr key={point.month}>
+                  <th scope="row">{point.month}</th>
+                  <td>{point.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+
+        <Panel
+          className="lg:col-span-2"
+          title="Hiring pipeline"
+          icon={<UserAddOutlined />}
+          action={
+            <Link
+              href="/orgnization/recruitment"
+              className="!text-xs !font-medium !text-accentDeepColor hover:!underline"
+            >
+              23 open roles
+            </Link>
+          }
+        >
+          <div className="space-y-4">
+            {PIPELINE.map((row) => (
+              <div key={row.stage}>
+                <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                  <span className="text-xs text-grayColor">{row.stage}</span>
+                  <span className="text-sm font-semibold tabular-nums text-blackColor">
+                    {row.count}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#ECEEF3]">
+                  <div
+                    style={{ width: `${(row.count / pipelineMax) * 100}%` }}
+                    className="h-full rounded-full bg-accentDeepColor"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
+
+          <Link
+            href="/orgnization/recruitment"
+            className="mt-5 flex items-center justify-center gap-1.5 rounded-lg border border-[#ECEEF3] py-2 text-xs font-medium !text-secondaryTextColor transition-colors hover:!border-accentColor/40 hover:!text-accentDeepColor"
+          >
+            View positions <ArrowRightOutlined style={{ fontSize: 11 }} />
+          </Link>
+        </Panel>
+      </div>
+
+      {/* ---------- Departments + activity ---------- */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Panel
+          className="lg:col-span-2"
+          title="Department distribution"
+          icon={<ApartmentOutlined />}
+        >
+          <div className="space-y-4">
+            {DEPARTMENTS.map((dept) => (
+              <div key={dept.name}>
+                <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                  <span className="text-xs text-grayColor">{dept.name}</span>
+                  <span className="text-xs tabular-nums text-darkGrayColor">
+                    <span className="font-semibold text-blackColor">
+                      {dept.employees}
+                    </span>{" "}
+                    · {Math.round((dept.employees / totalHeadcount) * 100)}%
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#ECEEF3]">
+                  <div
+                    style={{
+                      width: `${(dept.employees / DEPARTMENTS[0].employees) * 100}%`,
+                    }}
+                    className="h-full rounded-full bg-accentDeepColor"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel
+          className="lg:col-span-3"
+          title="Recent activity"
+          icon={<ClockCircleOutlined />}
+        >
+          <ul className="-mx-2 space-y-0.5">
+            {ACTIVITIES.map((activity) => (
+              <li key={activity.id}>
+                <div className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-offWhiteColor">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accentColor/10 text-xs font-semibold text-accentDeepColor">
+                    {activity.user.charAt(0)}
+                  </span>
+                  <p className="min-w-0 flex-1 truncate text-sm text-grayColor">
+                    <span className="font-medium text-blackColor">
+                      {activity.user}
+                    </span>{" "}
+                    {activity.action}
+                  </p>
+                  <span className="shrink-0 text-xs text-darkGrayColor">
+                    {activity.time}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+
+      {/* ---------- Assistant strip ---------- */}
+      <Link
+        href="/orgnization/chat-bot"
+        className="block rounded-2xl border border-accentColor/25 bg-gradient-to-r from-accentColor/[0.07] to-glowColor/[0.05] p-5 transition-colors hover:border-accentColor/45"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="hrx-ping-soft absolute inline-flex h-full w-full rounded-full bg-accentDeepColor" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accentDeepColor" />
+              </span>
+              <span className="text-xs font-semibold text-blackColor">
+                HRX Assistant
+              </span>
+            </div>
+            <p className="text-sm text-grayColor">
+              3 candidates for{" "}
+              <span className="font-medium text-blackColor">
+                Senior Backend Engineer
+              </span>{" "}
+              scored above 90%. Shall I schedule interviews for Thursday?
+            </p>
+          </div>
+          <span className="flex shrink-0 items-center gap-2 rounded-lg border border-accentColor/25 bg-whiteColor px-3.5 py-2 text-xs font-medium text-accentDeepColor">
+            Ask anything about your workforce
+            <SendOutlined style={{ fontSize: 11 }} />
+          </span>
+        </div>
+      </Link>
+
+      {/* ---------- Leave requests ---------- */}
+      <Panel
+        title="Pending leave requests"
+        icon={<CalendarOutlined />}
+        action={
+          <Link
+            href="/orgnization/leaves"
+            className="!text-xs !font-medium !text-accentDeepColor hover:!underline"
+          >
+            View all
+          </Link>
         }
       >
         <Table
-          columns={leaveRequestsColumns}
-          dataSource={leaveRequestsData}
+          columns={leaveColumns}
+          dataSource={LEAVE_REQUESTS}
           pagination={false}
-          scroll={{ x: 800 }}
+          scroll={{ x: 720 }}
+          size="middle"
         />
-      </Card>
-
-      {/* Quick Actions */}
-      {/* <Card title="Quick Actions">
-        <Row gutter={[16, 16]}>
-          <Col xs={12} sm={6}>
-            <Button
-              type="default"
-              block
-              size="large"
-              icon={<UserOutlined />}
-              className="h-20 flex flex-col items-center justify-center"
-            >
-              <span className="mt-2">Add Employee</span>
-            </Button>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Button
-              type="default"
-              block
-              size="large"
-              icon={<CalendarOutlined />}
-              className="h-20 flex flex-col items-center justify-center"
-            >
-              <span className="mt-2">Mark Attendance</span>
-            </Button>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Button
-              type="default"
-              block
-              size="large"
-              icon={<FileTextOutlined />}
-              className="h-20 flex flex-col items-center justify-center"
-            >
-              <span className="mt-2">Generate Report</span>
-            </Button>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Button
-              type="default"
-              block
-              size="large"
-              icon={<TeamOutlined />}
-              className="h-20 flex flex-col items-center justify-center"
-            >
-              <span className="mt-2">Post Job</span>
-            </Button>
-          </Col>
-        </Row>
-      </Card> */}
+      </Panel>
     </div>
   );
 };

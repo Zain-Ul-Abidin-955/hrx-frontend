@@ -1,8 +1,18 @@
 import axiosInstance from "../axios/axiosInstance";
+import type { AxiosRequestConfig } from "axios";
 import type { UpdateProfilePayload, UserProfile } from "@/types/profile";
 
-export const getProfile = async (): Promise<UserProfile> => {
-  const response = await axiosInstance.get("/profile");
+interface ProfileRequestConfig extends AxiosRequestConfig {
+  suppressAuthRedirect?: boolean;
+}
+
+export const getProfile = async (
+  options: { suppressAuthRedirect?: boolean } = {},
+): Promise<UserProfile> => {
+  const config: ProfileRequestConfig = {
+    suppressAuthRedirect: options.suppressAuthRedirect,
+  };
+  const response = await axiosInstance.get("/profile", config);
   return response.data;
 };
 

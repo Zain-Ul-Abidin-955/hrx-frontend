@@ -14,6 +14,19 @@
   --color-grayLightColor: #B9BBBD;
   --color-halfGrayColor: #1E1E1E80;
   --color-blueColor: #2D9CDB;
+
+  /* ---- Landing (dark) palette ---------------------------------------- */
+  /* Neutral canvas + two accents: indigo (primary) and cyan (highlight).  */
+  --color-nightColor: #07080C;
+  --color-nightSoftColor: #0B0D14;
+  --color-panelColor: #10131D;
+  --color-panelHighColor: #161A26;
+  --color-lineColor: #232839;
+  --color-lightColor: #EEF0F6;
+  --color-mutedColor: #98A1B4;
+  --color-accentColor: #6366F1;
+  --color-accentDeepColor: #4F46E5;
+  --color-glowColor: #22D3EE;
 }
 
 @tailwind utilities;
@@ -31,4 +44,216 @@
 .attendance-action-btn.ant-btn-primary:disabled .anticon,
 .attendance-action-btn.ant-btn-primary.ant-btn-disabled .anticon {
   color: #ffffff !important;
+}
+
+/* ====================================================================== */
+/* Landing page                                                            */
+/* ====================================================================== */
+
+.hrx-dark {
+  color-scheme: dark;
+}
+
+/* Faint blueprint grid, faded out towards the edges. */
+.hrx-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 100% 60% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 100% 60% at 50% 0%, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+
+/* Text that fades from the light body colour into the accent pair. */
+.hrx-gradient-text {
+  background-image: linear-gradient(100deg, #ffffff 0%, #c7d2fe 40%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 1px gradient hairline used to separate sections. */
+.hrx-rule {
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    rgba(99, 102, 241, 0.35),
+    rgba(34, 211, 238, 0.25),
+    transparent
+  );
+}
+
+/* Card with a gradient border drawn via mask (keeps the inner fill flat). */
+.hrx-ring {
+  position: relative;
+}
+.hrx-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(99, 102, 241, 0.55), rgba(34, 211, 238, 0.22) 45%, transparent 70%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.hrx-ring:hover::after {
+  opacity: 1;
+}
+
+@keyframes hrx-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.hrx-float {
+  animation: hrx-float 7s ease-in-out infinite;
+}
+
+@keyframes hrx-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hrx-rise {
+  animation: hrx-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hrx-ping-soft {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.hrx-ping-soft {
+  animation: hrx-ping-soft 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Indeterminate bar used by the full-screen brand loader. */
+@keyframes hrx-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+.hrx-sweep {
+  animation: hrx-sweep 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes hrx-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50% { opacity: 0.9; transform: scale(1.12); }
+}
+.hrx-breathe {
+  animation: hrx-breathe 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hrx-float,
+  .hrx-rise,
+  .hrx-ping-soft,
+  .hrx-breathe {
+    animation: none;
+  }
+  /* keep a hint of motion so the loader still reads as "working" */
+  .hrx-sweep {
+    animation-duration: 2.4s;
+  }
+}
+
+/* ---- Ant Design pieces rendered on the dark landing ------------------ */
+
+.hrx-modal .ant-modal-content {
+  background-color: var(--color-panelColor);
+  border: 1px solid var(--color-lineColor);
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 32px 80px -20px rgba(0, 0, 0, 0.8);
+}
+
+.hrx-modal .ant-modal-body {
+  padding: 0;
+}
+
+.hrx-modal .ant-modal-close {
+  color: var(--color-mutedColor);
+  inset-inline-end: 18px;
+  top: 18px;
+}
+
+.hrx-modal .ant-modal-close:hover {
+  color: var(--color-lightColor);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.hrx-dark .ant-form-item-explain-error {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* The signup dialog is a tall form — tighten the default vertical rhythm so it
+   fits a laptop viewport without scrolling. */
+.hrx-modal .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.hrx-modal .ant-form-vertical .ant-form-item-label {
+  padding-bottom: 6px;
+}
+
+/* ====================================================================== */
+/* Dashboard shell (dark rail + dark navbar, light content)                */
+/* ====================================================================== */
+
+/* AntD paints Sider with its own dark blue; the rail supplies its own ground. */
+.sider-style {
+  background: var(--color-nightColor) !important;
+}
+
+.sider-style .ant-layout-sider-children {
+  height: 100%;
+}
+
+/* Thin, low-contrast scrollbar so the rail's nav doesn't grow a light gutter. */
+.hrx-rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-lineColor) transparent;
+}
+
+.hrx-rail-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hrx-rail-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hrx-rail-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-lineColor);
+  border-radius: 999px;
+}
+
+.hrx-rail-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-mutedColor);
+}
+
+/* Stat/insight cards: flat by default, lifted on hover. */
+.hrx-card {
+  border: 1px solid #eceef3;
+  border-radius: 16px;
+  background: #ffffff;
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.hrx-card:hover {
+  border-color: color-mix(in srgb, var(--color-accentColor) 35%, #eceef3);
+  box-shadow: 0 12px 32px -14px rgba(79, 70, 229, 0.35);
 }

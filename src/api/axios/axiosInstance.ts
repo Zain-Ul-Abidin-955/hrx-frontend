@@ -1,6 +1,10 @@
 import axios from "axios";
 import { message } from "antd";
 
+type AuthAwareRequestConfig = {
+  suppressAuthRedirect?: boolean;
+};
+
 const axiosInstance = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_BASE_URL}`,
   withCredentials: true,
@@ -29,7 +33,8 @@ function isAuthFailure(error: unknown): boolean {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (isAuthFailure(error)) {
+    const config = error?.config as AuthAwareRequestConfig | undefined;
+    if (isAuthFailure(error) && !config?.suppressAuthRedirect) {
       message.error("Session expired. Please log in again.");
       window.location.href = "/login";
     }

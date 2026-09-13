@@ -1,18 +1,20 @@
 "use client";
 
 import React from "react";
-import { Form, Button } from "antd";
+import { Form } from "antd";
 import { SafetyOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CustomInput from "@/components/input/CustomInput";
+import AuthFormCard from "../components/AuthFormCard";
+import AuthSubmitButton from "../components/AuthSubmitButton";
 
 interface VerifyOtpFormValues {
   otp: string;
 }
 
 const VerifyOtp: React.FC = () => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<VerifyOtpFormValues>();
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
 
@@ -26,12 +28,22 @@ const VerifyOtp: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[500px] mx-auto px-4 sm:px-6 lg:px-0">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h1>
-        <p className="text-gray-600">Enter the 6-digit OTP sent to your email</p>
-      </div>
-
+    <AuthFormCard
+      title="Check your email"
+      subtitle="Enter the 6-digit code we sent to your email address."
+      back={{ href: "/forgot-password", label: "Use a different email" }}
+      footer={
+        <>
+          Didn&apos;t get the code?{" "}
+          <Link
+            href="/forgot-password"
+            className="font-medium text-accentColor transition-colors hover:text-glowColor"
+          >
+            Resend
+          </Link>
+        </>
+      }
+    >
       <Form
         form={form}
         name="verify-otp"
@@ -39,14 +51,15 @@ const VerifyOtp: React.FC = () => {
         layout="vertical"
         autoComplete="off"
         requiredMark={false}
-        className="space-y-4"
       >
         <CustomInput
           name="otp"
-          label="OTP Code"
-          placeholder="Enter 6-digit OTP"
+          label="Verification code"
+          placeholder="123456"
           icon={<SafetyOutlined />}
           maxLength={6}
+          tone="dark"
+          inputClassName="tracking-[0.4em]"
           rules={[
             { required: true, message: "Please enter OTP!" },
             { len: 6, message: "OTP must be 6 digits!" },
@@ -57,28 +70,13 @@ const VerifyOtp: React.FC = () => {
           ]}
         />
 
-        <Form.Item className="mb-0">
-          <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            loading={loading}
-            className="w-full !bg-primaryColor border-0 rounded-lg h-12 font-medium"
-          >
-            {loading ? "Verifying..." : "Verify OTP"}
-          </Button>
+        <Form.Item className="!mb-0 !mt-2">
+          <AuthSubmitButton loading={loading} loadingLabel="Verifying…">
+            Verify code
+          </AuthSubmitButton>
         </Form.Item>
       </Form>
-
-      <div className="mt-6 text-center">
-        <Link
-          href="/forgot-password"
-          className="text-blue-600 hover:text-blue-700 font-medium"
-        >
-          Resend OTP
-        </Link>
-      </div>
-    </div>
+    </AuthFormCard>
   );
 };
 

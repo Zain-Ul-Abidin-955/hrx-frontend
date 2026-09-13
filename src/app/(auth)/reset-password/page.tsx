@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { Form, Button, message } from "antd";
+import { Form, message } from "antd";
 import { LockOutlined } from "@ant-design/icons";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { resetPassword } from "@/api/collection/auth";
 import CustomInput from "@/components/input/CustomInput";
+import AuthFormCard from "../components/AuthFormCard";
+import AuthSubmitButton from "../components/AuthSubmitButton";
 
 interface ResetPasswordFormValues {
   password: string;
@@ -57,12 +58,11 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[500px] mx-auto px-4 sm:px-6 lg:px-0">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Reset Password</h1>
-        <p className="text-gray-600">Create a new password for your account</p>
-      </div>
-
+    <AuthFormCard
+      title="Set a new password"
+      subtitle="Use at least 8 characters with an uppercase letter, a number, and a symbol."
+      back={{ href: "/login", label: "Back to sign in" }}
+    >
       <Form
         form={form}
         name="reset-password"
@@ -70,25 +70,26 @@ const ResetPassword: React.FC = () => {
         layout="vertical"
         autoComplete="off"
         requiredMark={false}
-        className="space-y-4"
       >
         <CustomInput
           name="password"
-          label="New Password"
+          label="New password"
           type="password"
           placeholder="Enter new password"
           icon={<LockOutlined />}
           hasFeedback
+          tone="dark"
         />
 
         <CustomInput
           name="confirmPassword"
-          label="Confirm Password"
+          label="Confirm password"
           type="password"
-          placeholder="Confirm new password"
+          placeholder="Re-enter new password"
           icon={<LockOutlined />}
           dependencies={["password"]}
           hasFeedback
+          tone="dark"
           rules={[
             { required: true, message: "Please confirm your password!" },
             ({ getFieldValue }) => ({
@@ -102,28 +103,13 @@ const ResetPassword: React.FC = () => {
           ]}
         />
 
-        <Form.Item className="mb-0">
-          <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            loading={isPending}
-            className="w-full !bg-primaryColor border-0 rounded-lg h-12 font-medium"
-          >
-            {isPending ? "Updating..." : "Update Password"}
-          </Button>
+        <Form.Item className="!mb-0 !mt-2">
+          <AuthSubmitButton loading={isPending} loadingLabel="Updating…">
+            Update password
+          </AuthSubmitButton>
         </Form.Item>
       </Form>
-
-      <div className="mt-6 text-center">
-        <Link
-          href="/login"
-          className="text-blue-600 hover:text-blue-700 font-medium"
-        >
-          Back to Login
-        </Link>
-      </div>
-    </div>
+    </AuthFormCard>
   );
 };
 
