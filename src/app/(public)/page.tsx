@@ -1,432 +1,445 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { Button } from "antd";
+import React, { useEffect, useState } from "react";
+import { ConfigProvider } from "antd";
 import {
   RobotOutlined,
   TeamOutlined,
   CalendarOutlined,
   FileTextOutlined,
-  DashboardOutlined,
+  LineChartOutlined,
   SafetyOutlined,
-  ThunderboltOutlined,
-  CheckCircleOutlined,
+  CheckOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import LandingHeader from "./components/LandingHeader";
-import LandingSignupForm from "./components/LandingSignupForm";
+import LandingNav from "./components/LandingNav";
+import SignupDialog from "./components/SignupDialog";
+import ProductPreview from "./components/ProductPreview";
 import useUserStore from "@/store/userStore";
 import { getDashboardPath } from "@/utils/authRoutes";
+import antdDarkTheme from "@/lib/antdDarkTheme";
 
-const FEATURE_ICON_COLORS = [
-  "text-primaryColor",
-  "text-blueColor",
-  "text-secondaryColor",
-  "text-primaryColor",
-  "text-blueColor",
-  "text-secondaryColor",
-] as const;
+const STATS = [
+  { value: "10K+", label: "Active users" },
+  { value: "95%", label: "Admin time saved" },
+  { value: "24/7", label: "AI support" },
+  { value: "99.9%", label: "Uptime" },
+];
+
+const FEATURES = [
+  {
+    icon: <TeamOutlined />,
+    title: "Recruitment with built-in ATS",
+    description:
+      "Publish roles, collect applications, and let AI screen and rank every résumé against the job description.",
+    span: "lg:col-span-2",
+  },
+  {
+    icon: <CalendarOutlined />,
+    title: "Attendance & leave",
+    description:
+      "Automated check-ins, real-time monitoring, and leave requests that route themselves to the right approver.",
+    span: "lg:col-span-2",
+  },
+  {
+    icon: <LineChartOutlined />,
+    title: "Analytics dashboard",
+    description:
+      "Headcount, productivity trends, and hiring velocity — all live, no spreadsheet exports required.",
+    span: "lg:col-span-2",
+  },
+  {
+    icon: <FileTextOutlined />,
+    title: "Employee self-service",
+    description:
+      "A portal where your team handles payroll details, benefits, time off, and documents on their own.",
+    span: "lg:col-span-3",
+  },
+  {
+    icon: <SafetyOutlined />,
+    title: "Compliance & security",
+    description:
+      "Role-based access, encrypted records, and audit-ready exports across every organization on the platform.",
+    span: "lg:col-span-3",
+  },
+];
+
+const STEPS = [
+  {
+    step: "01",
+    title: "Set up your organization",
+    description:
+      "Import employees, define roles and policies, and invite your admins. Takes minutes, not a migration project.",
+  },
+  {
+    step: "02",
+    title: "Let the AI take the load",
+    description:
+      "Résumés get screened and ranked, attendance reconciles itself, and routine employee questions are answered around the clock.",
+  },
+  {
+    step: "03",
+    title: "Decide with real numbers",
+    description:
+      "Live dashboards and an assistant you can ask in plain English — “who is on leave next week?” — before you commit to anything.",
+  },
+];
+
+const BENEFITS = [
+  "Reduce hiring time by 60% with AI-powered screening",
+  "Automate 80% of repetitive HR tasks",
+  "Real-time workforce analytics and insights",
+  "24/7 AI assistant for employee support",
+  "Seamless integration with existing tools",
+  "Secure, compliant, and scalable for any team size",
+];
 
 const LandingPage: React.FC = () => {
   const router = useRouter();
+  const [signupOpen, setSignupOpen] = useState(false);
+
   const user = useUserStore((state) => state.user);
-  const loading = useUserStore((state) => state.loading);
-  const sessionChecked = useUserStore((state) => state.sessionChecked);
   const checkSession = useUserStore((state) => state.checkSession);
+
   const dashboardPath = getDashboardPath(user?.role);
-  const isSessionLoading = loading || !sessionChecked;
 
   useEffect(() => {
     checkSession();
   }, [checkSession]);
 
-  const features = [
-    {
-      icon: <RobotOutlined className={`text-5xl ${FEATURE_ICON_COLORS[0]}`} />,
-      title: "AI-Powered Assistant",
-      description:
-        "Smart AI assistant that helps automate HR tasks, provides insights, and answers employee queries instantly 24/7.",
-    },
-    {
-      icon: <TeamOutlined className={`text-5xl ${FEATURE_ICON_COLORS[1]}`} />,
-      title: "Intelligent Recruitment with ATS",
-      description:
-        "Advanced Applicant Tracking System powered by AI to screen resumes, match candidates, and streamline hiring process.",
-    },
-    {
-      icon: (
-        <CalendarOutlined className={`text-5xl ${FEATURE_ICON_COLORS[2]}`} />
-      ),
-      title: "Smart Attendance Management",
-      description:
-        "Automated attendance tracking with face recognition, real-time monitoring, and intelligent leave management.",
-    },
-    {
-      icon: (
-        <DashboardOutlined className={`text-5xl ${FEATURE_ICON_COLORS[3]}`} />
-      ),
-      title: "Analytics Dashboard",
-      description:
-        "Comprehensive analytics and insights on workforce performance, productivity trends, and HR metrics.",
-    },
-    {
-      icon: (
-        <FileTextOutlined className={`text-5xl ${FEATURE_ICON_COLORS[4]}`} />
-      ),
-      title: "Employee Self-Service",
-      description:
-        "Empower employees with self-service portal for payroll, benefits, time-off requests, and document management.",
-    },
-    {
-      icon: (
-        <SafetyOutlined className={`text-5xl ${FEATURE_ICON_COLORS[5]}`} />
-      ),
-      title: "Compliance & Security",
-      description:
-        "Ensure data security and regulatory compliance with advanced encryption and automated compliance checks.",
-    },
-  ];
+  const openSignup = () => setSignupOpen(true);
 
-  const stats = [
-    { number: "10K+", label: "Active Users" },
-    { number: "95%", label: "Time Saved" },
-    { number: "24/7", label: "AI Support" },
-    { number: "99.9%", label: "Uptime" },
-  ];
+  const primaryAction = () => {
+    if (dashboardPath) router.push(dashboardPath);
+    else openSignup();
+  };
+
+  const primaryLabel = dashboardPath
+    ? "Go to dashboard"
+    : "Create your workspace";
 
   return (
-    <div className="min-h-screen mx-auto bg-offWhiteColor">
-      <LandingHeader
-        dashboardPath={dashboardPath}
-        isSessionLoading={isSessionLoading}
-      />
+    <ConfigProvider theme={antdDarkTheme}>
+      <div className="hrx-dark min-h-screen bg-nightColor font-[family-name:var(--font-poppins)] text-lightColor antialiased">
+        <LandingNav onGetStarted={openSignup} dashboardPath={dashboardPath} />
 
-      {/* Hero Section */}
-      <section className="pt-16 pb-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center px-4 py-2 bg-primaryColor/10 rounded-full mb-6">
-                <ThunderboltOutlined className="text-primaryColor mr-2" />
-                <span className="text-primaryColor font-semibold text-sm">
-                  AI-Powered Workforce Management
+        {/* ---------------------------------------------------------- Hero */}
+        <section className="hrx-grid relative overflow-hidden">
+          {/* ambient glows */}
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-accentColor/20 blur-[140px]" />
+          <div className="pointer-events-none absolute -right-32 top-40 h-[380px] w-[380px] rounded-full bg-glowColor/10 blur-[120px]" />
+
+          <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-16 sm:px-8 sm:pt-24">
+            <div className="hrx-rise mx-auto max-w-4xl text-center">
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-lineColor bg-panelColor/70 py-1.5 pl-2.5 pr-4 backdrop-blur">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="hrx-ping-soft absolute inline-flex h-full w-full rounded-full bg-glowColor" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-glowColor" />
+                </span>
+                <span className="text-xs font-medium tracking-wide text-mutedColor">
+                  AI-powered workforce management
                 </span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-blackColor mb-6 leading-tight">
-                Transform Your HR with
-                <span className="block text-primaryColor mt-2">
-                  Artificial Intelligence
+              <h1 className="mt-7 text-balance text-[2.25rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">
+                Hire faster. Manage smarter.
+                <span className="hrx-gradient-text mt-2 block">
+                  Let AI handle the rest.
                 </span>
               </h1>
 
-              <p className="text-xl text-grayColor mb-8 leading-relaxed">
-                Revolutionize your workforce management with our AI-powered HRMS.
-                Automate recruitment, manage attendance, and empower your team
-                with intelligent insights.
+              <p className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-mutedColor sm:text-lg">
+                HRX AI brings recruitment, attendance, leave, and workforce
+                analytics into one workspace — with an assistant that screens
+                candidates, answers employee questions, and tells you what needs
+                attention today.
               </p>
 
-              <Button
-                type="primary"
-                size="large"
-                loading={isSessionLoading}
-                onClick={() =>
-                  router.push(dashboardPath ?? "/login")
-                }
-                className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90 h-12 px-8"
-              >
-                {isSessionLoading
-                  ? "Checking session"
-                  : dashboardPath
-                    ? "Go to Dashboard"
-                    : "Login to Your Account"}
-              </Button>
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={primaryAction}
+                  className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lightColor px-7 text-sm font-medium text-nightColor transition-all hover:bg-white sm:w-auto"
+                >
+                  {primaryLabel}
+                  <ArrowRightOutlined className="text-xs transition-transform group-hover:translate-x-0.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/jobs")}
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-lineColor bg-panelColor/60 px-7 text-sm font-medium text-lightColor backdrop-blur transition-colors hover:border-mutedColor/40 hover:bg-panelHighColor sm:w-auto"
+                >
+                  Browse open jobs
+                </button>
+              </div>
+
+              <p className="mt-5 text-xs text-mutedColor/80">
+                Takes about two minutes — we&apos;ll email your setup link.
+              </p>
             </div>
 
-            {isSessionLoading ? (
-              <div className="flex min-h-96 items-center justify-center rounded-2xl border border-grayLightColor/40 bg-whiteColor p-8 shadow-xl">
-                <Button loading type="text" size="large">
-                  Checking your session
-                </Button>
-              </div>
-            ) : dashboardPath ? (
-              <div className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-primaryColor/20 bg-whiteColor p-8 text-center shadow-xl">
-                <DashboardOutlined className="mb-5 text-6xl text-primaryColor" />
-                <h2 className="mb-3 text-3xl font-bold text-blackColor">
-                  Welcome back
-                </h2>
-                <p className="mb-2 text-grayColor">
-                  You are signed in{user?.email ? ` as ${user.email}` : ""}.
-                </p>
-                <p className="mb-7 text-sm text-grayColor">
-                  Continue to your HRX workspace to manage your organization.
-                </p>
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<DashboardOutlined />}
-                  onClick={() => router.push(dashboardPath)}
-                  className="!bg-primaryColor !border-primaryColor h-12 px-8"
-                >
-                  Open Dashboard
-                </Button>
-              </div>
-            ) : (
-              <LandingSignupForm id="landing-signup" />
-            )}
+            {/* product shot */}
+            <div className="hrx-rise relative mx-auto mt-16 max-w-5xl [animation-delay:150ms]">
+              <div className="pointer-events-none absolute -inset-x-16 -top-10 bottom-0 rounded-[40px] bg-accentColor/10 blur-[90px]" />
+              <ProductPreview />
+            </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-16 border-t border-grayLightColor/40">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl font-bold text-primaryColor mb-2">
-                  {stat.number}
+        {/* --------------------------------------------------------- Stats */}
+        <section className="relative border-y border-lineColor bg-nightSoftColor/60">
+          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden px-5 sm:px-8 lg:grid-cols-4">
+            {STATS.map((stat) => (
+              <div key={stat.label} className="px-2 py-9 text-center">
+                <div className="text-3xl font-semibold tracking-tight text-lightColor sm:text-4xl">
+                  {stat.value}
                 </div>
-                <div className="text-grayColor font-medium">{stat.label}</div>
+                <div className="mt-1.5 text-xs uppercase tracking-widest text-mutedColor">
+                  {stat.label}
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-whiteColor">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold text-blackColor mb-4">
-              Powerful Features for Modern HR
-            </h2>
-            <p className="text-xl text-grayColor max-w-2xl mx-auto">
-              Everything you need to manage your workforce efficiently, all
-              powered by cutting-edge AI technology
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-offWhiteColor p-8 rounded-2xl border border-grayLightColor/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-primaryColor/30"
-              >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-2xl font-bold text-blackColor mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-grayColor leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primaryColor">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-5xl font-bold text-whiteColor mb-4">
-            Why Choose HRX AI?
-          </h2>
-          <p className="text-xl text-whiteColor/80 mb-12 max-w-2xl mx-auto">
-            Join thousands of companies that have transformed their HR
-            operations with our AI-powered platform
-          </p>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left mb-12">
-            {[
-              "Reduce hiring time by 60% with AI-powered screening",
-              "Automate 80% of repetitive HR tasks",
-              "Real-time workforce analytics and insights",
-              "24/7 AI assistant for employee support",
-              "Seamless integration with existing tools",
-              "Secure, compliant, and scalable for any team size",
-            ].map((benefit, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 bg-whiteColor/10 rounded-xl p-5 border border-whiteColor/10"
-              >
-                <CheckCircleOutlined className="text-2xl text-blueColor mt-0.5 shrink-0" />
-                <span className="text-lg text-whiteColor">{benefit}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {isSessionLoading ? (
-              <Button type="primary" size="large" loading disabled>
-                Checking session
-              </Button>
-            ) : dashboardPath ? (
-              <Button
-                type="primary"
-                size="large"
-                icon={<DashboardOutlined />}
-                onClick={() => router.push(dashboardPath)}
-                className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
-              >
-                Go to Dashboard
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="primary"
-                  size="large"
-                  onClick={() =>
-                    document
-                      .getElementById("landing-signup")
-                      ?.scrollIntoView({ behavior: "smooth" })
-                  }
-                  className="!bg-whiteColor !text-primaryColor !border-whiteColor hover:!bg-whiteColor/90 h-12 px-8 font-medium"
-                >
-                  Get Started Free
-                </Button>
-                <Button
-                  size="large"
-                  onClick={() => router.push("/login")}
-                  className="!border-whiteColor !text-whiteColor !bg-primaryColor h-12 px-8 font-medium"
-                >
-                  Login to Your Account
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      {/* <footer className="bg-blackColor text-whiteColor py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-1">
-              <div className="flex items-center space-x-2 mb-4">
-                <RobotOutlined className="text-3xl text-blueColor" />
-                <span className="text-2xl font-bold">HRX AI</span>
-              </div>
-              <p className="text-darkGrayColor">
-                AI-Powered Workforce Management System for the future of work.
+        {/* ------------------------------------------------------ Features */}
+        <section id="features" className="scroll-mt-20 px-5 py-24 sm:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-accentColor">
+                Platform
+              </span>
+              <h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-[2.65rem] sm:leading-tight">
+                One workspace for the whole employee lifecycle
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-mutedColor">
+                Every module shares the same data, so a hire made on Monday is
+                on the attendance sheet Tuesday and in your reports by Friday.
               </p>
             </div>
 
-            <div>
-              <h4 className="text-lg font-bold mb-4">Product</h4>
-              <ul className="space-y-2 text-darkGrayColor">
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Integrations
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    API
-                  </a>
-                </li>
-              </ul>
-            </div>
+            <div className="mt-14 grid gap-4 lg:grid-cols-6">
+              {/* lead card */}
+              <article className="hrx-ring group relative overflow-hidden rounded-2xl border border-lineColor bg-panelColor p-7 transition-colors hover:border-lineColor lg:col-span-6">
+                <div className="relative grid items-center gap-8 lg:grid-cols-2">
+                  <div>
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-accentColor to-accentDeepColor text-lg text-white shadow-lg shadow-accentColor/20">
+                      <RobotOutlined />
+                    </span>
+                    <h3 className="mt-5 text-xl font-semibold tracking-tight text-lightColor">
+                      An assistant that actually knows your company
+                    </h3>
+                    <p className="mt-3 max-w-lg text-sm leading-relaxed text-mutedColor">
+                      Ask it anything about your workforce and it answers from
+                      your live HR data — headcount, policy, leave balances,
+                      candidate scores. It drafts job descriptions, screens
+                      applicants, and handles employee questions so your team
+                      doesn&apos;t answer the same one twice.
+                    </p>
+                  </div>
 
-            <div>
-              <h4 className="text-lg font-bold mb-4">Company</h4>
-              <ul className="space-y-2 text-darkGrayColor">
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Careers
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
+                  <div className="space-y-2.5 rounded-xl border border-lineColor bg-nightSoftColor/70 p-4">
+                    <div className="ml-auto max-w-[80%] rounded-xl rounded-br-sm bg-accentColor px-3.5 py-2.5 text-xs leading-relaxed text-white">
+                      Who is out of office next week?
+                    </div>
+                    <div className="max-w-[85%] rounded-xl rounded-bl-sm border border-lineColor bg-panelHighColor px-3.5 py-2.5 text-xs leading-relaxed text-mutedColor">
+                      Four people: two on annual leave, one on sick leave, one
+                      remote. Engineering is down 20% — want me to flag it to
+                      the sprint owner?
+                    </div>
+                    <div className="ml-auto max-w-[70%] rounded-xl rounded-br-sm bg-accentColor px-3.5 py-2.5 text-xs leading-relaxed text-white">
+                      Yes, and reschedule Thursday&apos;s interviews.
+                    </div>
+                  </div>
+                </div>
+              </article>
 
-            <div>
-              <h4 className="text-lg font-bold mb-4">Legal</h4>
-              <ul className="space-y-2 text-darkGrayColor">
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Security
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-whiteColor transition-colors">
-                    Compliance
-                  </a>
-                </li>
-              </ul>
+              {FEATURES.map((feature) => (
+                <article
+                  key={feature.title}
+                  className={`hrx-ring group relative rounded-2xl border border-lineColor bg-panelColor p-6 transition-transform duration-300 hover:-translate-y-1 ${feature.span}`}
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-lineColor bg-panelHighColor text-base text-accentColor transition-colors group-hover:border-accentColor/40 group-hover:text-glowColor">
+                    {feature.icon}
+                  </span>
+                  <h3 className="mt-4 text-base font-semibold tracking-tight text-lightColor">
+                    {feature.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-mutedColor">
+                    {feature.description}
+                  </p>
+                </article>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="border-t border-grayColor pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-darkGrayColor text-sm">
-              © 2026 HRX AI. All rights reserved.
-            </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a
-                href="#"
-                className="text-darkGrayColor hover:text-whiteColor transition-colors"
-              >
-                <span className="sr-only">Twitter</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                </svg>
-              </a>
-              <a
-                href="#"
-                className="text-darkGrayColor hover:text-whiteColor transition-colors"
-              >
-                <span className="sr-only">LinkedIn</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                </svg>
-              </a>
-              <a
-                href="#"
-                className="text-darkGrayColor hover:text-whiteColor transition-colors"
-              >
-                <span className="sr-only">GitHub</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path
-                    fillRule="evenodd"
-                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </a>
+        {/* --------------------------------------------------------- Steps */}
+        <section
+          id="platform"
+          className="scroll-mt-20 border-y border-lineColor bg-nightSoftColor/50 px-5 py-24 sm:px-8"
+        >
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-glowColor">
+                How it works
+              </span>
+              <h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-[2.65rem] sm:leading-tight">
+                Live in a day, not a quarter
+              </h2>
+            </div>
+
+            <div className="relative mt-14 grid gap-10 lg:grid-cols-3 lg:gap-8">
+              {/* connector */}
+              <div className="hrx-rule pointer-events-none absolute left-0 right-0 top-5 hidden lg:block" />
+
+              {STEPS.map((item) => (
+                <div key={item.step} className="relative">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-lineColor bg-panelColor text-xs font-semibold text-accentColor">
+                    {item.step}
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold tracking-tight text-lightColor">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-mutedColor">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </footer> */}
-    </div>
+        </section>
+
+        {/* ----------------------------------------------------------- Why */}
+        <section id="why" className="scroll-mt-20 px-5 py-24 sm:px-8">
+          <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-20">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-accentColor">
+                Why HRX
+              </span>
+              <h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-[2.65rem] sm:leading-tight">
+                Built for teams that outgrew the spreadsheet
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-mutedColor">
+                HR teams spend most of their week on work a system should do on
+                its own. HRX takes that layer off your plate and leaves the
+                judgement calls to you.
+              </p>
+              <button
+                type="button"
+                onClick={primaryAction}
+                className="group mt-8 inline-flex h-11 items-center gap-2 rounded-xl bg-accentColor px-6 text-sm font-medium text-white transition-colors hover:bg-accentDeepColor"
+              >
+                {primaryLabel}
+                <ArrowRightOutlined className="text-xs transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
+
+            <ul className="space-y-3">
+              {BENEFITS.map((benefit) => (
+                <li
+                  key={benefit}
+                  className="flex items-start gap-4 rounded-xl border border-lineColor bg-panelColor/60 p-5 transition-colors hover:border-accentColor/30 hover:bg-panelColor"
+                >
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accentColor/15 text-[10px] text-glowColor">
+                    <CheckOutlined />
+                  </span>
+                  <span className="text-sm leading-relaxed text-lightColor/90">
+                    {benefit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* ----------------------------------------------------------- CTA */}
+        <section className="px-5 pb-24 sm:px-8">
+          <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-lineColor bg-panelColor px-6 py-16 text-center sm:px-16">
+            <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[700px] -translate-x-1/2 rounded-full bg-accentColor/25 blur-[110px]" />
+            <div className="pointer-events-none absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-glowColor/10 blur-[100px]" />
+
+            <div className="relative">
+              <h2 className="mx-auto max-w-2xl text-balance text-3xl font-semibold tracking-tight sm:text-4xl sm:leading-tight">
+                Give your HR team its week back
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-mutedColor">
+                Set up your workspace today and see what the assistant finds in
+                your first hiring cycle.
+              </p>
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={primaryAction}
+                  className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lightColor px-7 text-sm font-medium text-nightColor transition-colors hover:bg-white sm:w-auto"
+                >
+                  {primaryLabel}
+                  <ArrowRightOutlined className="text-xs transition-transform group-hover:translate-x-0.5" />
+                </button>
+                {!dashboardPath && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/login")}
+                    className="flex h-12 w-full items-center justify-center rounded-xl border border-lineColor px-7 text-sm font-medium text-lightColor transition-colors hover:border-mutedColor/40 hover:bg-panelHighColor sm:w-auto"
+                  >
+                    Sign in
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* -------------------------------------------------------- Footer */}
+        <footer className="border-t border-lineColor px-5 py-12 sm:px-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accentColor to-glowColor text-sm font-bold text-white">
+                H
+              </span>
+              <div>
+                <div className="text-sm font-semibold text-lightColor">
+                  HRX AI
+                </div>
+                <div className="text-xs text-mutedColor">
+                  AI-powered workforce management
+                </div>
+              </div>
+            </div>
+
+            <nav className="flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-mutedColor">
+              <a href="#features" className="transition-colors hover:text-lightColor">
+                Features
+              </a>
+              <a href="#platform" className="transition-colors hover:text-lightColor">
+                How it works
+              </a>
+              <button
+                type="button"
+                onClick={() => router.push("/jobs")}
+                className="transition-colors hover:text-lightColor"
+              >
+                Jobs
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="transition-colors hover:text-lightColor"
+              >
+                Sign in
+              </button>
+            </nav>
+          </div>
+
+          <div className="mx-auto mt-10 max-w-6xl border-t border-lineColor pt-6 text-xs text-mutedColor/70">
+            © {new Date().getFullYear()} HRX AI. All rights reserved.
+          </div>
+        </footer>
+
+        <SignupDialog open={signupOpen} onClose={() => setSignupOpen(false)} />
+      </div>
+    </ConfigProvider>
   );
 };
 

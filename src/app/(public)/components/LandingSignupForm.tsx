@@ -1,11 +1,14 @@
 "use client";
 
-import React from "react";
-import { Form, Button, message } from "antd";
+import React, { useState } from "react";
+import { Form, message } from "antd";
 import {
   BankOutlined,
   MailOutlined,
   GlobalOutlined,
+  CheckOutlined,
+  LoadingOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
@@ -17,13 +20,18 @@ import CustomInput from "@/components/input/CustomInput";
 interface LandingSignupFormProps {
   id?: string;
   className?: string;
+  /** Rendered after a successful submission, e.g. a dialog close button. */
+  onDone?: () => void;
 }
 
 const LandingSignupForm: React.FC<LandingSignupFormProps> = ({
   id = "landing-signup",
   className = "",
+  onDone,
 }) => {
   const [form] = Form.useForm<CreateOrganizationPayload>();
+  const [submitted, setSubmitted] = useState(false);
+
   const { mutate: createOrg, isPending } = useMutation({
     mutationFn: (payload: CreateOrganizationPayload) =>
       createOrganization(payload),
@@ -39,8 +47,8 @@ const LandingSignupForm: React.FC<LandingSignupFormProps> = ({
       },
       {
         onSuccess: () => {
-          message.success("Application submitted successfully!");
           form.resetFields();
+          setSubmitted(true);
         },
         onError: (error) => {
           const errorMessage = isAxiosError(error)
@@ -53,16 +61,40 @@ const LandingSignupForm: React.FC<LandingSignupFormProps> = ({
     );
   };
 
-  return (
-    <div
-      id={id}
-      className={`bg-whiteColor rounded-2xl p-8 shadow-xl border border-grayLightColor/40 ${className}`}
-    >
-      <div className="mb-6 text-center">
-        <h3 className="text-2xl font-bold text-primaryColor mb-2">
-          Create Account
+  if (submitted) {
+    return (
+      <div id={id} className={`px-7 py-12 text-center ${className}`}>
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accentColor to-glowColor">
+          <CheckOutlined className="text-xl text-white" />
+        </div>
+        <h3 className="mb-2 text-xl font-semibold text-lightColor">
+          Request received
         </h3>
-        <p className="text-grayColor">Start using HRX AI today</p>
+        <p className="mx-auto mb-7 max-w-xs text-sm leading-relaxed text-mutedColor">
+          We&apos;ve got your details. Our team will review the workspace and
+          email you the setup link shortly.
+        </p>
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg bg-lightColor px-5 py-2.5 text-sm font-medium text-nightColor transition-colors hover:bg-white"
+        >
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div id={id} className={`px-7 pb-7 pt-8 ${className}`}>
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold tracking-tight text-lightColor">
+          Create your workspace
+        </h3>
+        <p className="mt-1.5 text-sm text-mutedColor">
+          Tell us about your organization and we&apos;ll get HRX ready for your
+          team.
+        </p>
       </div>
 
       <Form
@@ -71,67 +103,75 @@ const LandingSignupForm: React.FC<LandingSignupFormProps> = ({
         onFinish={onFinish}
         layout="vertical"
         autoComplete="off"
-        className="space-y-1"
         requiredMark={false}
       >
         <CustomInput
           name="org_name"
-          label="Organization Name"
-          placeholder="Enter organization name"
+          label="Organization name"
+          placeholder="Acme Inc."
           icon={<BankOutlined />}
+          tone="dark"
         />
 
         <CustomInput
           name="email"
-          label="Email"
+          label="Work email"
           type="email"
-          placeholder="user@example.com"
+          placeholder="you@company.com"
           icon={<MailOutlined />}
-        />
-
-        <CustomInput
-          name="description"
-          label="Description"
-          type="textarea"
-          placeholder="Brief description of your organization"
-          required={false}
-          rows={3}
+          tone="dark"
         />
 
         <CustomInput
           name="website"
           label="Website"
           type="url"
-          placeholder="https://example.com"
+          placeholder="https://company.com"
           icon={<GlobalOutlined />}
           required={false}
+          tone="dark"
         />
 
-        <Form.Item className="mb-0 mt-4">
-          <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            loading={isPending}
-            block
-            className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90 rounded-lg h-12 font-medium"
+        <CustomInput
+          name="description"
+          label="What does your team do?"
+          type="textarea"
+          placeholder="A short description of your organization"
+          required={false}
+          rows={3}
+          tone="dark"
+        />
+
+        <Form.Item className="!mb-0 !mt-1">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-accentColor text-sm font-medium text-white transition-colors hover:bg-accentDeepColor disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isPending ? "Creating account..." : "Create Account"}
-          </Button>
+            {isPending ? (
+              <>
+                <LoadingOutlined />
+                Creating workspace…
+              </>
+            ) : (
+              <>
+                Create workspace
+                <ArrowRightOutlined className="text-xs" />
+              </>
+            )}
+          </button>
         </Form.Item>
       </Form>
 
-      <div className="mt-5 text-center">
-        <p className="text-grayColor text-sm">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="text-primaryColor hover:text-blueColor font-medium"
-          >
-            Login
-          </Link>
-        </p>
-      </div>
+      <p className="mt-5 text-center text-sm text-mutedColor">
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-accentColor transition-colors hover:text-glowColor"
+        >
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 };

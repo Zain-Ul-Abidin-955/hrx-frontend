@@ -3,14 +3,10 @@
 import React, { useMemo, useState } from "react";
 import {
   Button,
-  Card,
   Col,
-  Descriptions,
-  Divider,
   Form,
   InputNumber,
   Modal,
-  Progress,
   Row,
   Select,
   Space,
@@ -25,9 +21,9 @@ import {
   DeleteOutlined,
   EditOutlined,
   ExportOutlined,
-  FileTextOutlined,
+  FileSearchOutlined,
+  InboxOutlined,
   PlusOutlined,
-  RobotOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -35,6 +31,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import Link from "next/link";
 import CustomInput from "@/components/input/CustomInput";
+import Panel from "@/components/dashboard/Panel";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 import { LoadingSpinner } from "@/components/loader/Loading";
 import MyModal from "@/components/modal/MyModal";
 import useUserStore from "@/store/userStore";
@@ -111,15 +109,16 @@ const JOB_FORM_DEFAULTS: Partial<JobFormValues> = {
 function getErrorMessage(error: unknown, fallback: string) {
   if (!isAxiosError(error)) return fallback;
   const data = error.response?.data as
-    | { message?: string; detail?: string | { msg?: string }[] }
-    | undefined;
+    { message?: string; detail?: string | { msg?: string }[] } | undefined;
 
   if (typeof data?.message === "string") return data.message;
   if (typeof data?.detail === "string") return data.detail;
   if (Array.isArray(data?.detail)) {
     return (
-      data.detail.map((item) => item?.msg).filter(Boolean).join(", ") ||
-      fallback
+      data.detail
+        .map((item) => item?.msg)
+        .filter(Boolean)
+        .join(", ") || fallback
     );
   }
   return fallback;
@@ -205,25 +204,23 @@ const Recruitment: React.FC = () => {
     enabled: Boolean(organizationId && canManageRecruitment),
   });
 
-  const {
-    data: applicationsByJob = {},
-    isFetching: isFetchingApplications,
-  } = useQuery<Record<string, JobApplication[]>>({
-    queryKey: ["job-applications", jobs.map((job) => job.id).join(",")],
-    queryFn: async () => {
-      const entries = await Promise.all(
-        jobs.map(async (job) => {
-          const applications = await getJobApplications(job.id);
-          return [job.id, applications] as const;
-        }),
-      );
-      return Object.fromEntries(entries);
-    },
-    enabled: canManageRecruitment && jobs.length > 0,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-  });
+  const { data: applicationsByJob = {}, isFetching: isFetchingApplications } =
+    useQuery<Record<string, JobApplication[]>>({
+      queryKey: ["job-applications", jobs.map((job) => job.id).join(",")],
+      queryFn: async () => {
+        const entries = await Promise.all(
+          jobs.map(async (job) => {
+            const applications = await getJobApplications(job.id);
+            return [job.id, applications] as const;
+          }),
+        );
+        return Object.fromEntries(entries);
+      },
+      enabled: canManageRecruitment && jobs.length > 0,
+      refetchInterval: 15_000,
+      refetchIntervalInBackground: false,
+      refetchOnWindowFocus: true,
+    });
 
   const refreshRecruitment = () => {
     queryClient.invalidateQueries({ queryKey: ["organization-jobs"] });
@@ -240,7 +237,9 @@ const Recruitment: React.FC = () => {
     }) => (jobId ? updateJob(jobId, payload) : createJob(payload)),
     onSuccess: (_job, variables) => {
       message.success(
-        variables.jobId ? "Job updated successfully" : "Job created successfully",
+        variables.jobId
+          ? "Job updated successfully"
+          : "Job created successfully",
       );
       refreshRecruitment();
       setIsJobModalOpen(false);
@@ -323,32 +322,42 @@ const Recruitment: React.FC = () => {
         application.status === "hired" && isThisMonth(application.updated_at),
     ).length;
 
-    return [
+    const openCount = jobs.filter((job) => job.is_active).length;
+
+    // These four are not a categorical series — they all wear the brand accent
+    // rather than one hue each (see StatTile).
+    const tiles: StatTileProps[] = [
       {
-        title: "Open Positions",
-        value: String(jobs.filter((job) => job.is_active).length),
-        icon: <FileTextOutlined className="text-3xl text-blue-600" />,
-        bgColor: "bg-blue-50",
+        label: "Open positions",
+        value: openCount,
+        icon: <FileSearchOutlined />,
+        caption:
+          jobs.length === 0
+            ? "no roles yet"
+            : jobs.length === openCount
+              ? "all roles published"
+              : `${jobs.length - openCount} inactive`,
       },
       {
-        title: "Applications",
-        value: String(applications.length),
-        icon: <TeamOutlined className="text-3xl text-purple-600" />,
-        bgColor: "bg-purple-50",
+        label: "Applications",
+        value: applications.length,
+        icon: <TeamOutlined />,
+        caption: openCount ? `across ${openCount} open roles` : "no open roles",
       },
       {
-        title: "In Process",
-        value: String(inProcess),
-        icon: <ClockCircleOutlined className="text-3xl text-orange-600" />,
-        bgColor: "bg-orange-50",
+        label: "In process",
+        value: inProcess,
+        icon: <ClockCircleOutlined />,
+        caption: "submitted, reviewing or shortlisted",
       },
       {
-        title: "Hired This Month",
-        value: String(hiredThisMonth),
-        icon: <CheckCircleOutlined className="text-3xl text-green-600" />,
-        bgColor: "bg-green-50",
+        label: "Hired this month",
+        value: hiredThisMonth,
+        icon: <CheckCircleOutlined />,
+        caption: "marked hired since the 1st",
       },
     ];
+    return tiles;
   }, [applications, jobs]);
 
   const screenedCount = applications.filter(
@@ -389,15 +398,18 @@ const Recruitment: React.FC = () => {
 
   const jobColumns: ColumnsType<JobRow> = [
     {
-      title: "Job Title",
+      title: "Role",
       dataIndex: "title",
       key: "title",
       render: (title: string, record) => (
-        <div>
-          <p className="font-semibold text-gray-800">{title}</p>
-          <p className="text-xs text-gray-500 mt-1">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-blackColor">
+            {title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-darkGrayColor">
             {humanize(record.employment_type)} ·{" "}
             {humanize(record.workplace_type)}
+            {record.location ? ` · ${record.location}` : ""}
           </p>
         </div>
       ),
@@ -406,50 +418,70 @@ const Recruitment: React.FC = () => {
       title: "Department",
       dataIndex: "department",
       key: "department",
-      render: (department: string | null) => (
-        <Tag color="blue">{department || "Unassigned"}</Tag>
-      ),
+      render: (department: string | null) =>
+        department ? (
+          <span className="inline-flex rounded-md bg-accentColor/10 px-2 py-0.5 text-xs font-medium text-accentDeepColor">
+            {department}
+          </span>
+        ) : (
+          <span className="text-xs text-darkGrayColor">Unassigned</span>
+        ),
     },
     {
       title: "Applications",
       dataIndex: "applications",
       key: "applications",
+      align: "right" as const,
       render: (count: number) => (
-        <span className="font-medium text-gray-700">
+        <span className="text-sm font-semibold tabular-nums text-blackColor">
           {isFetchingApplications ? "…" : count}
         </span>
       ),
     },
     {
-      title: "AI Screening",
+      title: "AI screening",
       dataIndex: "aiScreened",
       key: "aiScreened",
-      width: 180,
-      render: (screened: number, record) => (
-        <Progress
-          percent={
-            record.applications
-              ? Math.round((screened / record.applications) * 100)
-              : 0
-          }
-          size="small"
-          format={() =>
-            isFetchingApplications
-              ? "Loading"
-              : `${screened}/${record.applications}`
-          }
-        />
-      ),
+      width: 190,
+      render: (screened: number, record) => {
+        const percent = record.applications
+          ? Math.round((screened / record.applications) * 100)
+          : 0;
+        return (
+          <div>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <span className="text-xs text-darkGrayColor">
+                {isFetchingApplications
+                  ? "Loading"
+                  : record.applications
+                    ? `${screened}/${record.applications}`
+                    : "No applicants"}
+              </span>
+              {record.applications > 0 && (
+                <span className="text-xs tabular-nums text-grayColor">
+                  {percent}%
+                </span>
+              )}
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[#ECEEF3]">
+              <div
+                style={{ width: `${percent}%` }}
+                className="h-full rounded-full bg-accentDeepColor transition-[width] duration-500"
+              />
+            </div>
+          </div>
+        );
+      },
     },
     {
-      title: "Status",
+      title: "Published",
       dataIndex: "is_active",
       key: "is_active",
       render: (isActive: boolean, record) => (
         <Switch
           checked={isActive}
-          checkedChildren="Active"
-          unCheckedChildren="Inactive"
+          checkedChildren="Live"
+          unCheckedChildren="Off"
           loading={
             isUpdatingJobState && activeStateVariables?.jobId === record.id
           }
@@ -460,34 +492,40 @@ const Recruitment: React.FC = () => {
       ),
     },
     {
-      title: "Action",
+      title: "",
       key: "action",
+      align: "right" as const,
       render: (_value, record) => (
-        <Space>
-          <Link href={`/orgnization/recruitment/${record.slug}`}>
-            <Button type="primary" size="small" className="!bg-primaryColor">
-              Manage Candidates
-            </Button>
-          </Link>
+        <Space size={8}>
           <Button size="small" onClick={() => setSelectedJob(record)}>
             Details
           </Button>
+          <Link href={`/orgnization/recruitment/${record.slug}`}>
+            <Button size="small" type="primary">
+              Candidates
+            </Button>
+          </Link>
         </Space>
       ),
     },
   ];
 
+  /** Shared by the loading and permission states so the page never jumps. */
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Recruitment &amp; ATS
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Post roles, track applicants, and let the assistant rank every resume.
+      </p>
+    </div>
+  );
+
   if (!user || profileLoading || (organizationId && isLoadingJobs)) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Recruitment & ATS
-          </h1>
-          <p className="text-gray-600 mt-1">
-            AI-powered applicant tracking system
-          </p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
@@ -495,96 +533,147 @@ const Recruitment: React.FC = () => {
 
   if (!canManageRecruitment || !organizationId) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Recruitment & ATS
-          </h1>
-          <p className="text-gray-600 mt-1">
-            AI-powered applicant tracking system
+      <div className="space-y-5">
+        {pageHeading}
+        <div className="hrx-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+            <InboxOutlined />
+          </span>
+          <p className="mt-1 text-sm font-medium text-blackColor">
+            {!canManageRecruitment
+              ? "You do not have access to recruitment"
+              : "No organization linked"}
+          </p>
+          <p className="max-w-sm text-sm text-grayColor">
+            {!canManageRecruitment
+              ? "Ask an organization admin to grant you recruitment permissions."
+              : "Your account is not linked to an organization yet."}
           </p>
         </div>
-        <Card>
-          <p className="text-gray-600">
-            {!canManageRecruitment
-              ? "You do not have permission to manage recruitment."
-              : "Your account is not linked to an organization."}
-          </p>
-        </Card>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Recruitment & ATS
-          </h1>
-          <p className="text-gray-600 mt-1">
-            AI-powered applicant tracking system
-          </p>
-        </div>
+  const screenPercent = applications.length
+    ? Math.round((screenedCount / applications.length) * 100)
+    : 0;
+
+  const jobsEmptyState = (
+    <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+        <InboxOutlined />
+      </span>
+      <p className="mt-1 text-sm font-medium text-blackColor">
+        {isJobsError
+          ? "Could not load jobs"
+          : jobFilter === "all"
+            ? "No jobs posted yet"
+            : `No ${jobFilter} jobs`}
+      </p>
+      <p className="max-w-sm text-sm text-grayColor">
+        {isJobsError
+          ? "Something went wrong fetching this organization's jobs. Try again in a moment."
+          : jobFilter === "all"
+            ? "Post your first role and the assistant will start screening resumes as they arrive."
+            : "Switch the filter to see the rest of your roles."}
+      </p>
+      {!isJobsError && jobFilter === "all" && (
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          size="large"
-          className="!bg-primaryColor"
+          className="mt-3"
           onClick={openCreateModal}
         >
-          Post New Job
+          Post a job
         </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* ---------- Page header ---------- */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {pageHeading}
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={openCreateModal}
+          className="shrink-0"
+        >
+          Post a job
+        </Button>
+      </header>
+
+      {/* ---------- Stat tiles ---------- */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatTile key={stat.label} {...stat} />
+        ))}
       </div>
 
-      <Row gutter={[16, 16]}>
-        {stats.map((stat) => (
-          <Col xs={24} sm={12} lg={6} key={stat.title}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-800">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                  {stat.icon}
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Card className="bg-linear-to-r from-purple-50 to-blue-50 border-purple-200">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="bg-purple-100 p-4 rounded-full self-start">
-            <RobotOutlined className="text-3xl text-purple-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-800 mb-1">
-              AI-Powered Resume Screening
-            </h3>
-            <p className="text-gray-600 text-sm">
-              AI has screened {screenedCount}{" "}
-              {screenedCount === 1 ? "resume" : "resumes"}
-              {shortlistedCount > 0
-                ? `, with ${shortlistedCount} currently shortlisted.`
-                : "."}{" "}
-              Open a position below to review its candidates and rankings.
+      {/* ---------- AI screening strip ---------- */}
+      <section className="rounded-2xl border border-accentColor/25 bg-gradient-to-r from-accentColor/[0.07] to-glowColor/[0.05] p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="hrx-ping-soft absolute inline-flex h-full w-full rounded-full bg-accentDeepColor" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accentDeepColor" />
+              </span>
+              <span className="text-xs font-semibold text-blackColor">
+                AI resume screening
+              </span>
+            </div>
+            <p className="text-sm text-grayColor">
+              {applications.length === 0 ? (
+                "No applications yet. Every resume that arrives is ranked automatically."
+              ) : (
+                <>
+                  Screened{" "}
+                  <span className="font-medium text-blackColor">
+                    {screenedCount} of {applications.length}
+                  </span>{" "}
+                  {applications.length === 1 ? "resume" : "resumes"}
+                  {shortlistedCount > 0
+                    ? `, ${shortlistedCount} shortlisted.`
+                    : "."}{" "}
+                  Open a role to review its rankings.
+                </>
+              )}
             </p>
           </div>
-        </div>
-      </Card>
 
-      <Card
-        title={<span className="text-lg font-semibold">Jobs</span>}
-        extra={
+          {applications.length > 0 && (
+            <div className="w-full shrink-0 sm:w-52">
+              <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                <span className="text-xs text-grayColor">Screened</span>
+                <span className="text-sm font-semibold tabular-nums text-blackColor">
+                  {screenPercent}%
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-whiteColor">
+                <div
+                  style={{ width: `${screenPercent}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-accentDeepColor to-glowColor transition-[width] duration-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ---------- Jobs ---------- */}
+      <Panel
+        flush
+        title="Jobs"
+        icon={<FileSearchOutlined />}
+        action={
           <Select<JobFilter>
             aria-label="Filter jobs"
             value={jobFilter}
             onChange={setJobFilter}
+            size="small"
             className="min-w-36"
             options={[
               { label: `All (${jobs.length})`, value: "all" },
@@ -606,13 +695,9 @@ const Recruitment: React.FC = () => {
           pagination={false}
           loading={isLoadingJobs}
           scroll={{ x: 1000 }}
-          locale={{
-            emptyText: isJobsError
-              ? "Failed to load jobs. Please try again."
-              : "No jobs in this view",
-          }}
+          locale={{ emptyText: jobsEmptyState }}
         />
-      </Card>
+      </Panel>
 
       <Modal
         title={editingJob ? "Edit Job" : "Post New Job"}
@@ -626,7 +711,6 @@ const Recruitment: React.FC = () => {
         onOk={() => jobForm.submit()}
         okText={editingJob ? "Save Changes" : "Post Job"}
         confirmLoading={isSavingJob}
-        okButtonProps={{ className: "!bg-primaryColor" }}
         width={760}
         centered
         destroyOnHidden
@@ -893,7 +977,6 @@ const Recruitment: React.FC = () => {
                   key="edit"
                   type="primary"
                   icon={<EditOutlined />}
-                  className="!bg-primaryColor"
                   onClick={() => {
                     setSelectedJob(null);
                     openEditModal(selectedJob);
@@ -906,62 +989,65 @@ const Recruitment: React.FC = () => {
         }
       >
         {selectedJob && (
-          <div className="pt-3">
-            <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-              <Descriptions.Item label="Department">
-                {selectedJob.department || "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Location">
-                {selectedJob.location || "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Employment">
-                {humanize(selectedJob.employment_type)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Workplace">
-                {humanize(selectedJob.workplace_type)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Experience">
-                {selectedJob.experience_level || "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Salary">
-                {formatSalary(selectedJob)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag color={selectedJob.is_active ? "green" : "default"}>
-                  {selectedJob.is_active ? "Active" : "Inactive"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Applications" span={2}>
-                {(applicationsByJob[selectedJob.id] ?? []).length}
-              </Descriptions.Item>
-            </Descriptions>
-            <Divider titlePlacement="start">Description</Divider>
-            <p className="whitespace-pre-wrap text-gray-700">
-              {selectedJob.description}
-            </p>
-            {selectedJob.requirements && (
-              <>
-                <Divider titlePlacement="start">Requirements</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {selectedJob.requirements}
-                </p>
-              </>
-            )}
-            {selectedJob.responsibilities && (
-              <>
-                <Divider titlePlacement="start">Responsibilities</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {selectedJob.responsibilities}
-                </p>
-              </>
-            )}
-            {selectedJob.benefits && (
-              <>
-                <Divider titlePlacement="start">Benefits</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {selectedJob.benefits}
-                </p>
-              </>
+          <div className="pt-2">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-[#ECEEF3] p-4 sm:grid-cols-3">
+              {(
+                [
+                  ["Department", selectedJob.department || "—"],
+                  ["Location", selectedJob.location || "—"],
+                  ["Employment", humanize(selectedJob.employment_type)],
+                  ["Workplace", humanize(selectedJob.workplace_type)],
+                  ["Experience", selectedJob.experience_level || "—"],
+                  ["Salary", formatSalary(selectedJob)],
+                  [
+                    "Applications",
+                    String((applicationsByJob[selectedJob.id] ?? []).length),
+                  ],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-[10px] font-medium uppercase tracking-wide text-darkGrayColor">
+                    {label}
+                  </dt>
+                  <dd className="mt-1 truncate text-sm text-blackColor">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+              <div className="min-w-0">
+                <dt className="text-[10px] font-medium uppercase tracking-wide text-darkGrayColor">
+                  Status
+                </dt>
+                <dd className="mt-1">
+                  <Tag
+                    variant="filled"
+                    className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
+                    color={selectedJob.is_active ? "success" : "default"}
+                  >
+                    {selectedJob.is_active ? "Active" : "Inactive"}
+                  </Tag>
+                </dd>
+              </div>
+            </dl>
+
+            {(
+              [
+                ["Description", selectedJob.description],
+                ["Requirements", selectedJob.requirements],
+                ["Responsibilities", selectedJob.responsibilities],
+                ["Benefits", selectedJob.benefits],
+              ] as const
+            ).map(([heading, body]) =>
+              body ? (
+                <section key={heading} className="mt-6">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkGrayColor">
+                    {heading}
+                  </h3>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-secondaryTextColor">
+                    {body}
+                  </p>
+                </section>
+              ) : null,
             )}
           </div>
         )}

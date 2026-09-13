@@ -81,14 +81,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
                 <Button
                   type="primary"
                   size="large"
-                  onClick={() => {
-                    const signup = document.getElementById("landing-signup");
-                    if (signup) {
-                      signup.scrollIntoView({ behavior: "smooth" });
-                    } else {
-                      router.push("/#landing-signup");
-                    }
-                  }}
+                  onClick={() => router.push("/")}
                   className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90"
                 >
                   Get Started

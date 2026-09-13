@@ -1,19 +1,20 @@
 "use client";
 import React, { useState } from "react";
-import { Badge, Avatar, Dropdown } from "antd";
+import { Badge, Dropdown, ConfigProvider } from "antd";
 import {
   SearchOutlined,
   BellOutlined,
   UserOutlined,
-  SettingOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LogoutModal from "@/components/modal/MyModal";
 import type { AppRole } from "@/layout/Layout";
 import useUserStore from "@/store/userStore";
+import antdDarkTheme from "@/lib/antdDarkTheme";
 import { getNameInitial } from "@/utils/getNameInitial";
 import { getUserDisplayName } from "@/utils/profileHelpers";
 
@@ -21,6 +22,20 @@ const SETTINGS_PATH_BY_ROLE: Record<AppRole, string> = {
   superadmin: "/superadmin/profile",
   org_admin: "/orgnization/profile",
   employee: "/employee/profile",
+};
+
+/** Second path segment → the title shown in the navbar. */
+const TITLE_BY_SEGMENT: Record<string, string> = {
+  dashboard: "Dashboard",
+  employees: "Employees",
+  recruitment: "Recruitment",
+  attendance: "Attendance",
+  leaves: "Leaves",
+  reports: "Reports",
+  profile: "Profile",
+  organization: "Organizations",
+  "chat-bot": "AI Assistant",
+  chatbot: "AI Assistant",
 };
 
 interface HeaderProps {
@@ -34,12 +49,22 @@ function formatRoleLabel(role?: string | null): string {
   return role.replace(/_/g, " ");
 }
 
+/** "/orgnization/recruitment/senior-dev" → "Recruitment" */
+function pageTitleFromPath(pathname: string): string {
+  const segment = pathname.split("/").filter(Boolean)[1];
+  return TITLE_BY_SEGMENT[segment ?? ""] ?? "Dashboard";
+}
+
+const TOGGLE_BUTTON =
+  "flex h-9 w-9 items-center justify-center rounded-lg text-mutedColor transition-colors hover:bg-white/[0.06] hover:text-lightColor";
+
 const Header: React.FC<HeaderProps> = ({
   role,
   onToggleSidebar,
   isSidebarCollapsed = false,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const user = useUserStore((state) => state.user);
@@ -51,36 +76,7 @@ const Header: React.FC<HeaderProps> = ({
   const userName = getUserDisplayName(user);
   const displayName = userName || userRole;
   const avatarInitial = getNameInitial(userName || displayName);
-
-  if (loading && !user) {
-    return (
-      <header className="bg-white shadow-sm border-b border-gray-200 w-full transition-all duration-300">
-        <div className="h-16 px-6 flex items-center justify-between w-full">
-          <div className="flex items-center space-x-4 flex-1">
-            {onToggleSidebar && (
-              <button
-                onClick={onToggleSidebar}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-colors"
-              >
-                {isSidebarCollapsed ? (
-                  <MenuUnfoldOutlined className="text-xl" />
-                ) : (
-                  <MenuFoldOutlined className="text-xl" />
-                )}
-              </button>
-            )}
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-          </div>
-        </div>
-      </header>
-    );
-  }
-
-  const showLogoutModal = () => {
-    setIsLogoutModalOpen(true);
-  };
+  const title = pageTitleFromPath(pathname);
 
   const handleLogout = () => {
     clearUser();
@@ -89,138 +85,113 @@ const Header: React.FC<HeaderProps> = ({
     router.push("/login");
   };
 
-  const handleCancelLogout = () => {
-    setIsLogoutModalOpen(false);
-  };
-
   const userMenuItems = [
     {
       key: "profile",
       icon: <UserOutlined />,
       label: "Profile",
       onClick: () => router.push(SETTINGS_PATH_BY_ROLE[role]),
-
     },
-    {
-      type: "divider" as const,
-    },
+    { type: "divider" as const },
     {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Logout",
-      onClick: showLogoutModal,
+      onClick: () => setIsLogoutModalOpen(true),
       danger: true,
     },
   ];
 
-  const notificationItems = [
-    {
-      key: "1",
-      label: (
-        <div className="py-2">
-          <p className="font-semibold text-gray-800">New Employee Joined</p>
-          <p className="text-sm text-gray-500">John Doe joined the team</p>
-          <p className="text-xs text-gray-400 mt-1">5 minutes ago</p>
-        </div>
-      ),
-    },
-    {
-      key: "2",
-      label: (
-        <div className="py-2">
-          <p className="font-semibold text-gray-800">Leave Request</p>
-          <p className="text-sm text-gray-500">Sarah requested time off</p>
-          <p className="text-xs text-gray-400 mt-1">1 hour ago</p>
-        </div>
-      ),
-    },
-    {
-      key: "3",
-      label: (
-        <div className="py-2">
-          <p className="font-semibold text-gray-800">Task Completed</p>
-          <p className="text-sm text-gray-500">Onboarding process completed</p>
-          <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
-        </div>
-      ),
-    },
-    {
-      type: "divider" as const,
-    },
-    {
-      key: "all",
-      label: (
-        <div className="text-center text-blue-600 font-medium">
-          View All Notifications
-        </div>
-      ),
-    },
-  ];
+  const toggleButton = onToggleSidebar && (
+    <button
+      onClick={onToggleSidebar}
+      aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      className={TOGGLE_BUTTON}
+    >
+      {isSidebarCollapsed ? (
+        <MenuUnfoldOutlined className="text-[17px]" />
+      ) : (
+        <MenuFoldOutlined className="text-[17px]" />
+      )}
+    </button>
+  );
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 w-full transition-all duration-300">
-      <div className="h-16 px-6 flex items-center justify-between w-full">
-        <div className="flex items-center space-x-4 flex-1">
-          {onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-colors"
-            >
-              {isSidebarCollapsed ? (
-                <MenuUnfoldOutlined className="text-xl" />
+    <>
+      {/* Only the bar itself is dark-themed; the logout modal is a content-layer
+          dialog and stays on the light dashboard theme, like the sidebar's. */}
+      <ConfigProvider theme={antdDarkTheme}>
+        <header className="hrx-dark h-16 w-full border-b border-lineColor bg-nightColor">
+          <div className="flex h-full items-center gap-3 px-4 sm:px-6">
+            {toggleButton}
+
+            <div className="min-w-0 flex-1">
+              {loading && !user ? (
+                <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
               ) : (
-                <MenuFoldOutlined className="text-xl" />
+                <h1 className="truncate text-[15px] font-semibold tracking-tight text-lightColor">
+                  {title}
+                </h1>
               )}
+            </div>
+
+            {/* Search — a real affordance on wide screens, an icon below that. */}
+            <div className="hidden items-center gap-2 rounded-lg border border-lineColor bg-nightSoftColor px-3 py-1.5 text-xs text-mutedColor transition-colors hover:border-accentColor/40 lg:flex">
+              <SearchOutlined />
+              <span>Search</span>
+              <kbd className="ml-6 rounded border border-lineColor px-1.5 py-0.5 font-sans text-[10px] text-mutedColor/80">
+                ⌘K
+              </kbd>
+            </div>
+            <button
+              aria-label="Search"
+              className={`${TOGGLE_BUTTON} lg:hidden`}
+            >
+              <SearchOutlined className="text-[17px]" />
             </button>
-          )}
-        </div>
 
-        <div className="flex items-center space-x-4">
-          <button className="md:hidden text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-colors">
-            <SearchOutlined className="text-xl" />
-          </button>
-
-          {/* <Dropdown
-            menu={{ items: notificationItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <button className="relative text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-colors">
-              <Badge count={3} size="small" offset={[-2, 2]}>
-                <BellOutlined className="text-xl" />
+            <button aria-label="Notifications" className={TOGGLE_BUTTON}>
+              <Badge dot offset={[-2, 3]} color="#22D3EE">
+                <BellOutlined className="text-[17px] text-mutedColor" />
               </Badge>
             </button>
-          </Dropdown> */}
 
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <button className="flex items-center space-x-3 hover:bg-gray-100 p-2 rounded-lg transition-colors">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-gray-800 capitalize">
-                  {displayName}
-                </p>
-                <p className="text-xs text-gray-500">{userEmail}</p>
-              </div>
-              <Avatar
-                size={40}
-                className="!bg-primaryColor !text-white font-semibold"
+            <span className="hidden h-6 w-px bg-lineColor sm:block" />
+
+            {loading && !user ? (
+              <div className="h-9 w-9 animate-pulse rounded-full bg-white/10" />
+            ) : (
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={["click"]}
+                placement="bottomRight"
               >
-                {avatarInitial}
-              </Avatar>
-            </button>
-          </Dropdown>
-        </div>
-      </div>
+                <button className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.06]">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accentColor to-glowColor text-sm font-semibold text-white">
+                    {avatarInitial}
+                  </span>
+                  <span className="hidden text-left sm:block">
+                    <span className="block max-w-[160px] truncate text-xs font-medium capitalize text-lightColor">
+                      {displayName}
+                    </span>
+                    <span className="block max-w-[160px] truncate text-[11px] text-mutedColor">
+                      {userEmail || userRole}
+                    </span>
+                  </span>
+                  <DownOutlined className="hidden text-[10px] text-mutedColor sm:block" />
+                </button>
+              </Dropdown>
+            )}
+          </div>
+        </header>
+      </ConfigProvider>
 
       <LogoutModal
         open={isLogoutModalOpen}
         onConfirm={handleLogout}
-        onCancel={handleCancelLogout}
+        onCancel={() => setIsLogoutModalOpen(false)}
       />
-    </header>
+    </>
   );
 };
 

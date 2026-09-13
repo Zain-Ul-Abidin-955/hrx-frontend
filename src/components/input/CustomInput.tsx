@@ -6,6 +6,7 @@ import type { Rule } from "antd/es/form";
 import { EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
 
 type InputType = "text" | "email" | "password" | "url" | "textarea";
+type Tone = "light" | "dark";
 
 export interface CustomInputProps {
   name: string;
@@ -24,6 +25,8 @@ export interface CustomInputProps {
   maxLength?: number;
   /** When false, password skips complexity checks (e.g. login). Default true. */
   strengthCheck?: boolean;
+  /** Surface the field sits on. "dark" is used by the landing page. */
+  tone?: Tone;
 }
 
 interface FieldProps {
@@ -42,10 +45,28 @@ interface FieldProps {
   type?: InputType;
   rows?: number;
   maxLength?: number;
+  tone?: Tone;
 }
 
 const baseInputClass =
-  "w-full h-11 rounded-lg bg-offWhiteColor border border-grayLightColor/50 text-secondaryTextColor placeholder:text-darkGrayColor outline-none transition-colors focus:border-primaryColor focus:ring-1 focus:ring-primaryColor/20 disabled:opacity-60 disabled:cursor-not-allowed";
+  "w-full h-11 rounded-lg border outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+
+const TONE_INPUT_CLASS: Record<Tone, string> = {
+  light:
+    "bg-offWhiteColor border-grayLightColor/50 text-secondaryTextColor placeholder:text-darkGrayColor focus:border-primaryColor focus:ring-1 focus:ring-primaryColor/20",
+  dark:
+    "bg-nightSoftColor border-lineColor text-lightColor placeholder:text-mutedColor/60 focus:border-accentColor focus:ring-2 focus:ring-accentColor/25",
+};
+
+const TONE_ICON_CLASS: Record<Tone, string> = {
+  light: "text-darkGrayColor",
+  dark: "text-mutedColor",
+};
+
+const TONE_LABEL_CLASS: Record<Tone, string> = {
+  light: "text-secondaryTextColor",
+  dark: "text-lightColor/80",
+};
 
 const EMAIL_MAX_LENGTH = 254;
 const PASSWORD_MIN_LENGTH = 8;
@@ -130,6 +151,7 @@ const TextAreaField = forwardRef<HTMLTextAreaElement, FieldProps>(
       inputClassName = "",
       rows = 3,
       maxLength,
+      tone = "light",
     },
     ref,
   ) {
@@ -144,7 +166,7 @@ const TextAreaField = forwardRef<HTMLTextAreaElement, FieldProps>(
         disabled={disabled}
         rows={rows}
         maxLength={maxLength}
-        className={`${baseInputClass} h-auto py-2.5 px-3 resize-none ${inputClassName}`}
+        className={`${baseInputClass} ${TONE_INPUT_CLASS[tone]} h-auto py-2.5 px-3 resize-none ${inputClassName}`}
       />
     );
   },
@@ -162,6 +184,7 @@ const InputField = forwardRef<HTMLInputElement, FieldProps>(function InputField(
     inputClassName = "",
     type = "text",
     maxLength,
+    tone = "light",
   },
   ref,
 ) {
@@ -183,7 +206,9 @@ const InputField = forwardRef<HTMLInputElement, FieldProps>(function InputField(
   return (
     <div className="relative w-full">
       {icon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-darkGrayColor pointer-events-none z-10">
+        <span
+          className={`absolute left-3 top-1/2 -translate-y-1/2 ${TONE_ICON_CLASS[tone]} pointer-events-none z-10`}
+        >
           {icon}
         </span>
       )}
@@ -197,14 +222,16 @@ const InputField = forwardRef<HTMLInputElement, FieldProps>(function InputField(
         placeholder={placeholder}
         disabled={disabled}
         maxLength={maxLength}
-        className={`${baseInputClass} ${paddingLeft} ${paddingRight} ${inputClassName}`}
+        className={`${baseInputClass} ${TONE_INPUT_CLASS[tone]} ${paddingLeft} ${paddingRight} ${inputClassName}`}
       />
       {type === "password" && (
         <button
           type="button"
           tabIndex={-1}
           onClick={() => setShowPassword((prev) => !prev)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-darkGrayColor hover:text-secondaryTextColor"
+          className={`absolute right-3 top-1/2 -translate-y-1/2 ${TONE_ICON_CLASS[tone]} ${
+            tone === "dark" ? "hover:text-lightColor" : "hover:text-secondaryTextColor"
+          }`}
           aria-label={showPassword ? "Hide password" : "Show password"}
         >
           {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
@@ -230,6 +257,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
   hasFeedback,
   maxLength,
   strengthCheck = true,
+  tone = "light",
 }) => {
   const mergedRules =
     rules ?? getDefaultRules(type, required, label, strengthCheck);
@@ -247,7 +275,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
       name={name}
       label={
         label ? (
-          <span className="text-secondaryTextColor font-medium">{label}</span>
+          <span className={`${TONE_LABEL_CLASS[tone]} font-medium`}>{label}</span>
         ) : undefined
       }
       rules={mergedRules}
@@ -262,6 +290,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
           inputClassName={inputClassName}
           rows={rows}
           maxLength={resolvedMaxLength}
+          tone={tone}
         />
       ) : (
         <InputField
@@ -271,6 +300,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
           disabled={disabled}
           inputClassName={inputClassName}
           maxLength={resolvedMaxLength}
+          tone={tone}
         />
       )}
     </Form.Item>
