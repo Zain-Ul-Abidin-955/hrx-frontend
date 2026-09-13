@@ -4,17 +4,16 @@ import type {
   JobApplication,
   JobApplicationStatusUpdatePayload,
   JobCreatePayload,
-  JobStatus,
   JobUpdatePayload,
 } from "@/types/job";
 
 export const getOrganizationJobs = async (
   organizationId: string,
-  status?: JobStatus,
+  isActive?: boolean,
 ): Promise<Job[]> => {
   const response = await axiosInstance.get<Job[]>(
     `/jobs/organization/${organizationId}`,
-    { params: status ? { status } : undefined },
+    { params: isActive == null ? undefined : { is_active: isActive } },
   );
   return response.data;
 };
@@ -32,9 +31,8 @@ export const updateJob = async (
   return response.data;
 };
 
-export const deleteJob = async (jobId: string): Promise<Job> => {
-  const response = await axiosInstance.delete<Job>(`/jobs/${jobId}`);
-  return response.data;
+export const deleteJob = async (jobId: string): Promise<void> => {
+  await axiosInstance.delete(`/jobs/${jobId}`);
 };
 
 export const getJobApplications = async (
@@ -44,6 +42,15 @@ export const getJobApplications = async (
   const response = await axiosInstance.get<JobApplication[]>(
     `/jobs/${jobId}/applications`,
     { params: { sort } },
+  );
+  return response.data;
+};
+
+export const rerankJobApplications = async (
+  jobId: string,
+): Promise<JobApplication[]> => {
+  const response = await axiosInstance.post<JobApplication[]>(
+    `/jobs/${jobId}/applications/rerank`,
   );
   return response.data;
 };
@@ -66,4 +73,10 @@ export const updateJobApplicationStatus = async (
     payload,
   );
   return response.data;
+};
+
+export const deleteJobApplication = async (
+  applicationId: string,
+): Promise<void> => {
+  await axiosInstance.delete(`/jobs/applications/${applicationId}`);
 };

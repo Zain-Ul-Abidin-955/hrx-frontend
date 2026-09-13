@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Avatar,
   Button,
   Card,
   Col,
   Descriptions,
   Divider,
-  Empty,
   Form,
   InputNumber,
   Modal,
@@ -16,6 +14,7 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   message,
@@ -30,11 +29,11 @@ import {
   PlusOutlined,
   RobotOutlined,
   TeamOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import Link from "next/link";
 import CustomInput from "@/components/input/CustomInput";
 import { LoadingSpinner } from "@/components/loader/Loading";
 import MyModal from "@/components/modal/MyModal";
@@ -45,12 +44,10 @@ import {
   getJobApplications,
   getOrganizationJobs,
   updateJob,
-  updateJobApplicationStatus,
 } from "@/api/collection/jobs";
 import type {
   Job,
   JobApplication,
-  JobApplicationStatus,
   JobCreatePayload,
   JobEmploymentType,
   JobWorkplaceType,
@@ -72,20 +69,15 @@ interface JobFormValues {
   requirements?: string;
   responsibilities?: string;
   benefits?: string;
+  is_active: boolean;
 }
+
+type JobFilter = "all" | "active" | "inactive";
 
 interface JobRow extends Job {
   key: string;
   applications: number;
   aiScreened: number;
-}
-
-interface CandidateRow extends JobApplication {
-  key: string;
-  name: string;
-  email: string;
-  position: string;
-  job: Job;
 }
 
 const EMPLOYMENT_TYPE_OPTIONS = [
@@ -113,22 +105,7 @@ const JOB_FORM_DEFAULTS: Partial<JobFormValues> = {
   workplace_type: "onsite",
   salary_currency: "USD",
   salary_period: "yearly",
-};
-
-const APPLICATION_STATUS_LABELS: Record<JobApplicationStatus, string> = {
-  submitted: "Submitted",
-  reviewing: "Screening",
-  shortlisted: "Shortlisted",
-  rejected: "Rejected",
-  hired: "Hired",
-};
-
-const APPLICATION_STATUS_COLORS: Record<JobApplicationStatus, string> = {
-  submitted: "default",
-  reviewing: "orange",
-  shortlisted: "blue",
-  rejected: "red",
-  hired: "green",
+  is_active: true,
 };
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -161,7 +138,6 @@ function toJobPayload(values: JobFormValues): JobCreatePayload {
     location: emptyToNull(values.location),
     employment_type: values.employment_type,
     workplace_type: values.workplace_type,
-    status: "open",
     salary_min: values.salary_min ?? null,
     salary_max: values.salary_max ?? null,
     salary_currency: emptyToNull(values.salary_currency),
@@ -170,6 +146,7 @@ function toJobPayload(values: JobFormValues): JobCreatePayload {
     requirements: emptyToNull(values.requirements),
     responsibilities: emptyToNull(values.responsibilities),
     benefits: emptyToNull(values.benefits),
+    is_active: values.is_active,
   };
 }
 
@@ -216,24 +193,21 @@ const Recruitment: React.FC = () => {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Job | null>(null);
-  const [resumeTarget, setResumeTarget] = useState<CandidateRow | null>(null);
-  const candidatesSectionRef = useRef<HTMLDivElement>(null);
+  const [jobFilter, setJobFilter] = useState<JobFilter>("all");
 
   const {
     data: jobs = [],
     isLoading: isLoadingJobs,
     isError: isJobsError,
   } = useQuery({
-    queryKey: ["organization-jobs", organizationId, "open"],
-    queryFn: () => getOrganizationJobs(organizationId as string, "open"),
+    queryKey: ["organization-jobs", organizationId, "all"],
+    queryFn: () => getOrganizationJobs(organizationId as string),
     enabled: Boolean(organizationId && canManageRecruitment),
   });
 
   const {
     data: applicationsByJob = {},
-    isLoading: isLoadingApplications,
     isFetching: isFetchingApplications,
-    isError: isApplicationsError,
   } = useQuery<Record<string, JobApplication[]>>({
     queryKey: ["job-applications", jobs.map((job) => job.id).join(",")],
     queryFn: async () => {
@@ -246,6 +220,9 @@ const Recruitment: React.FC = () => {
       return Object.fromEntries(entries);
     },
     enabled: canManageRecruitment && jobs.length > 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const refreshRecruitment = () => {
@@ -263,7 +240,7 @@ const Recruitment: React.FC = () => {
     }) => (jobId ? updateJob(jobId, payload) : createJob(payload)),
     onSuccess: (_job, variables) => {
       message.success(
-        variables.jobId ? "Job updated successfully" : "Job posted successfully",
+        variables.jobId ? "Job updated successfully" : "Job created successfully",
       );
       refreshRecruitment();
       setIsJobModalOpen(false);
@@ -276,15 +253,24 @@ const Recruitment: React.FC = () => {
     },
   });
 
-  const { mutate: closeJob, isPending: isClosingJob } = useMutation({
-    mutationFn: (jobId: string) => updateJob(jobId, { status: "closed" }),
-    onSuccess: () => {
-      message.success("Position closed successfully");
+  const {
+    mutate: setJobActive,
+    isPending: isUpdatingJobState,
+    variables: activeStateVariables,
+  } = useMutation({
+    mutationFn: ({ jobId, isActive }: { jobId: string; isActive: boolean }) =>
+      updateJob(jobId, { is_active: isActive }),
+    onSuccess: (updatedJob) => {
+      message.success(
+        updatedJob.is_active
+          ? "Job activated and published"
+          : "Job made inactive",
+      );
       refreshRecruitment();
       setSelectedJob(null);
     },
     onError: (error) => {
-      message.error(getErrorMessage(error, "Failed to close the position."));
+      message.error(getErrorMessage(error, "Failed to update the job status."));
     },
   });
 
@@ -301,24 +287,15 @@ const Recruitment: React.FC = () => {
     },
   });
 
-  const { mutate: shortlistCandidate, isPending: isUpdatingCandidate } =
-    useMutation({
-      mutationFn: (applicationId: string) =>
-        updateJobApplicationStatus(applicationId, { status: "shortlisted" }),
-      onSuccess: () => {
-        message.success("Candidate shortlisted successfully");
-        queryClient.invalidateQueries({ queryKey: ["job-applications"] });
-      },
-      onError: (error) => {
-        message.error(
-          getErrorMessage(error, "Failed to shortlist the candidate."),
-        );
-      },
-    });
+  const visibleJobs = useMemo(() => {
+    if (jobFilter === "active") return jobs.filter((job) => job.is_active);
+    if (jobFilter === "inactive") return jobs.filter((job) => !job.is_active);
+    return jobs;
+  }, [jobFilter, jobs]);
 
   const jobRows = useMemo<JobRow[]>(
     () =>
-      jobs.map((job) => {
+      visibleJobs.map((job) => {
         const applications = applicationsByJob[job.id] ?? [];
         return {
           ...job,
@@ -329,54 +306,33 @@ const Recruitment: React.FC = () => {
           ).length,
         };
       }),
-    [applicationsByJob, jobs],
+    [applicationsByJob, visibleJobs],
   );
 
-  const candidates = useMemo<CandidateRow[]>(
-    () =>
-      jobs
-        .flatMap((job) =>
-          (applicationsByJob[job.id] ?? []).map((application) => ({
-            ...application,
-            key: application.id,
-            name:
-              application.candidate_name ||
-              application.parsed_resume?.full_name ||
-              "Candidate",
-            email:
-              application.candidate_email ||
-              application.parsed_resume?.email ||
-              "—",
-            position: job.title,
-            job,
-          })),
-        )
-        .sort(
-          (left, right) =>
-            (right.ranking_score ?? -1) - (left.ranking_score ?? -1),
-        ),
-    [applicationsByJob, jobs],
+  const applications = useMemo(
+    () => Object.values(applicationsByJob).flat(),
+    [applicationsByJob],
   );
 
   const stats = useMemo(() => {
-    const inProcess = candidates.filter((candidate) =>
-      ["submitted", "reviewing", "shortlisted"].includes(candidate.status),
+    const inProcess = applications.filter((application) =>
+      ["submitted", "reviewing", "shortlisted"].includes(application.status),
     ).length;
-    const hiredThisMonth = candidates.filter(
-      (candidate) =>
-        candidate.status === "hired" && isThisMonth(candidate.updated_at),
+    const hiredThisMonth = applications.filter(
+      (application) =>
+        application.status === "hired" && isThisMonth(application.updated_at),
     ).length;
 
     return [
       {
         title: "Open Positions",
-        value: String(jobs.length),
+        value: String(jobs.filter((job) => job.is_active).length),
         icon: <FileTextOutlined className="text-3xl text-blue-600" />,
         bgColor: "bg-blue-50",
       },
       {
         title: "Applications",
-        value: String(candidates.length),
+        value: String(applications.length),
         icon: <TeamOutlined className="text-3xl text-purple-600" />,
         bgColor: "bg-purple-50",
       },
@@ -393,13 +349,13 @@ const Recruitment: React.FC = () => {
         bgColor: "bg-green-50",
       },
     ];
-  }, [candidates, jobs.length]);
+  }, [applications, jobs]);
 
-  const screenedCount = candidates.filter(
-    (candidate) => candidate.ranking_status === "completed",
+  const screenedCount = applications.filter(
+    (application) => application.ranking_status === "completed",
   ).length;
-  const shortlistedCount = candidates.filter(
-    (candidate) => candidate.status === "shortlisted",
+  const shortlistedCount = applications.filter(
+    (application) => application.status === "shortlisted",
   ).length;
 
   const openCreateModal = () => {
@@ -426,6 +382,7 @@ const Recruitment: React.FC = () => {
       requirements: job.requirements ?? undefined,
       responsibilities: job.responsibilities ?? undefined,
       benefits: job.benefits ?? undefined,
+      is_active: job.is_active,
     });
     setIsJobModalOpen(true);
   };
@@ -486,112 +443,37 @@ const Recruitment: React.FC = () => {
     },
     {
       title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: () => <Tag color="green">Active</Tag>,
+      dataIndex: "is_active",
+      key: "is_active",
+      render: (isActive: boolean, record) => (
+        <Switch
+          checked={isActive}
+          checkedChildren="Active"
+          unCheckedChildren="Inactive"
+          loading={
+            isUpdatingJobState && activeStateVariables?.jobId === record.id
+          }
+          onChange={(checked) =>
+            setJobActive({ jobId: record.id, isActive: checked })
+          }
+        />
+      ),
     },
     {
       title: "Action",
       key: "action",
       render: (_value, record) => (
-        <Button
-          type="primary"
-          size="small"
-          className="!bg-primaryColor"
-          onClick={() => setSelectedJob(record)}
-        >
-          View Details
-        </Button>
-      ),
-    },
-  ];
-
-  const candidateColumns: ColumnsType<CandidateRow> = [
-    {
-      title: "Candidate",
-      dataIndex: "name",
-      key: "name",
-      render: (name: string, record) => (
-        <div className="flex items-center space-x-3">
-          <Avatar size={40} icon={<UserOutlined />} />
-          <div>
-            <p className="font-semibold text-gray-800">{name}</p>
-            <p className="text-xs text-gray-500">{record.email}</p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Position",
-      dataIndex: "position",
-      key: "position",
-    },
-    {
-      title: "AI Score",
-      dataIndex: "ranking_score",
-      key: "ranking_score",
-      render: (score: number | null, record) => {
-        if (score == null) {
-          return (
-            <Tag color={record.ranking_status === "failed" ? "red" : "gold"}>
-              {record.ranking_status === "failed" ? "Unavailable" : "Pending"}
-            </Tag>
-          );
-        }
-        return (
-          <div className="flex items-center space-x-2">
-            <Progress
-              type="circle"
-              percent={score}
-              size={40}
-              strokeColor={
-                score >= 80
-                  ? "#10b981"
-                  : score >= 60
-                    ? "#f59e0b"
-                    : "#ef4444"
-              }
-            />
-            <span className="font-semibold text-gray-700">{score}%</span>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: JobApplicationStatus) => (
-        <Tag color={APPLICATION_STATUS_COLORS[status]}>
-          {APPLICATION_STATUS_LABELS[status]}
-        </Tag>
-      ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: (_value, record) => {
-        const cannotShortlist = ["shortlisted", "rejected", "hired"].includes(
-          record.status,
-        );
-        return (
-          <Space>
-            <Button
-              type="primary"
-              size="small"
-              className="!bg-green-600"
-              disabled={cannotShortlist}
-              loading={isUpdatingCandidate}
-              onClick={() => shortlistCandidate(record.id)}
-            >
-              {record.status === "shortlisted" ? "Shortlisted" : "Shortlist"}
+        <Space>
+          <Link href={`/orgnization/recruitment/${record.slug}`}>
+            <Button type="primary" size="small" className="!bg-primaryColor">
+              Manage Candidates
             </Button>
-            <Button size="small" onClick={() => setResumeTarget(record)}>
-              View Resume
-            </Button>
-          </Space>
-        );
-      },
+          </Link>
+          <Button size="small" onClick={() => setSelectedJob(record)}>
+            Details
+          </Button>
+        </Space>
+      ),
     },
   ];
 
@@ -689,27 +571,34 @@ const Recruitment: React.FC = () => {
               {screenedCount === 1 ? "resume" : "resumes"}
               {shortlistedCount > 0
                 ? `, with ${shortlistedCount} currently shortlisted.`
-                : ". Ranked candidates appear below as applications arrive."}
+                : "."}{" "}
+              Open a position below to review its candidates and rankings.
             </p>
           </div>
-          <Button
-            type="primary"
-            className="!bg-purple-600"
-            disabled={candidates.length === 0}
-            onClick={() =>
-              candidatesSectionRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              })
-            }
-          >
-            View Results
-          </Button>
         </div>
       </Card>
 
       <Card
-        title={<span className="text-lg font-semibold">Open Positions</span>}
+        title={<span className="text-lg font-semibold">Jobs</span>}
+        extra={
+          <Select<JobFilter>
+            aria-label="Filter jobs"
+            value={jobFilter}
+            onChange={setJobFilter}
+            className="min-w-36"
+            options={[
+              { label: `All (${jobs.length})`, value: "all" },
+              {
+                label: `Active (${jobs.filter((job) => job.is_active).length})`,
+                value: "active",
+              },
+              {
+                label: `Inactive (${jobs.filter((job) => !job.is_active).length})`,
+                value: "inactive",
+              },
+            ]}
+          />
+        }
       >
         <Table<JobRow>
           columns={jobColumns}
@@ -719,34 +608,11 @@ const Recruitment: React.FC = () => {
           scroll={{ x: 1000 }}
           locale={{
             emptyText: isJobsError
-              ? "Failed to load open positions. Please try again."
-              : "No open positions yet",
+              ? "Failed to load jobs. Please try again."
+              : "No jobs in this view",
           }}
         />
       </Card>
-
-      <div ref={candidatesSectionRef}>
-        <Card
-          title={
-            <span className="text-lg font-semibold">
-              Top AI-Matched Candidates
-            </span>
-          }
-        >
-          <Table<CandidateRow>
-            columns={candidateColumns}
-            dataSource={candidates}
-            pagination={false}
-            loading={isLoadingApplications || isFetchingApplications}
-            scroll={{ x: 1000 }}
-            locale={{
-              emptyText: isApplicationsError
-                ? "Failed to load candidates. Please try again."
-                : "No applications received yet",
-            }}
-          />
-        </Card>
-      </div>
 
       <Modal
         title={editingJob ? "Edit Job" : "Post New Job"}
@@ -802,6 +668,22 @@ const Recruitment: React.FC = () => {
             type="textarea"
             rows={4}
           />
+          <Form.Item
+            name="is_active"
+            label={
+              <span className="text-secondaryTextColor font-medium">
+                Visibility
+              </span>
+            }
+          >
+            <Select
+              size="large"
+              options={[
+                { label: "Active — visible publicly", value: true },
+                { label: "Inactive — hidden publicly", value: false },
+              ]}
+            />
+          </Form.Item>
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <CustomInput
@@ -987,18 +869,23 @@ const Recruitment: React.FC = () => {
                   Remove
                 </Button>,
                 <Button
-                  key="close"
-                  loading={isClosingJob}
-                  onClick={() => closeJob(selectedJob.id)}
+                  key="active-state"
+                  loading={isUpdatingJobState}
+                  onClick={() =>
+                    setJobActive({
+                      jobId: selectedJob.id,
+                      isActive: !selectedJob.is_active,
+                    })
+                  }
                 >
-                  Close Position
+                  {selectedJob.is_active ? "Make Inactive" : "Activate Job"}
                 </Button>,
                 <Button
                   key="public-page"
                   icon={<ExportOutlined />}
                   href={`/jobs/${user.organization?.slug}/${selectedJob.slug}`}
                   target="_blank"
-                  disabled={!user.organization?.slug}
+                  disabled={!user.organization?.slug || !selectedJob.is_active}
                 >
                   View Public Page
                 </Button>,
@@ -1039,6 +926,11 @@ const Recruitment: React.FC = () => {
               <Descriptions.Item label="Salary">
                 {formatSalary(selectedJob)}
               </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={selectedJob.is_active ? "green" : "default"}>
+                  {selectedJob.is_active ? "Active" : "Inactive"}
+                </Tag>
+              </Descriptions.Item>
               <Descriptions.Item label="Applications" span={2}>
                 {(applicationsByJob[selectedJob.id] ?? []).length}
               </Descriptions.Item>
@@ -1075,151 +967,12 @@ const Recruitment: React.FC = () => {
         )}
       </Modal>
 
-      <Modal
-        title={
-          resumeTarget
-            ? `${resumeTarget.name} — Resume`
-            : "Candidate Resume"
-        }
-        open={resumeTarget != null}
-        onCancel={() => setResumeTarget(null)}
-        footer={<Button onClick={() => setResumeTarget(null)}>Close</Button>}
-        width={760}
-        centered
-      >
-        {resumeTarget && (
-          <div className="pt-3 max-h-[70vh] overflow-y-auto pr-2">
-            <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-              <Descriptions.Item label="Email">
-                {resumeTarget.email}
-              </Descriptions.Item>
-              <Descriptions.Item label="Phone">
-                {resumeTarget.candidate_phone ||
-                  resumeTarget.parsed_resume?.phone ||
-                  "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Location">
-                {resumeTarget.candidate_location ||
-                  resumeTarget.parsed_resume?.location ||
-                  "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Experience">
-                {resumeTarget.parsed_resume?.total_experience_years != null
-                  ? `${resumeTarget.parsed_resume.total_experience_years} years`
-                  : "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="AI recommendation">
-                {humanize(resumeTarget.ranking_recommendation)}
-              </Descriptions.Item>
-              <Descriptions.Item label="AI score">
-                {resumeTarget.ranking_score == null
-                  ? "Pending"
-                  : `${resumeTarget.ranking_score}%`}
-              </Descriptions.Item>
-            </Descriptions>
-
-            {(resumeTarget.summary || resumeTarget.parsed_resume?.summary) && (
-              <>
-                <Divider titlePlacement="start">Summary</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.summary || resumeTarget.parsed_resume?.summary}
-                </p>
-              </>
-            )}
-
-            <Divider titlePlacement="start">Skills</Divider>
-            {resumeTarget.parsed_resume?.skills.length ? (
-              <Space size={[4, 8]} wrap>
-                {resumeTarget.parsed_resume.skills.map((skill) => (
-                  <Tag color="blue" key={skill}>
-                    {skill}
-                  </Tag>
-                ))}
-              </Space>
-            ) : (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="No skills extracted"
-              />
-            )}
-
-            {resumeTarget.parsed_resume?.work_experience.map(
-              (experience, index) => (
-                <div
-                  key={`${experience.company}-${experience.title}-${index}`}
-                >
-                  {index === 0 && (
-                    <Divider titlePlacement="start">Work Experience</Divider>
-                  )}
-                  <p className="font-semibold text-gray-800">
-                    {[experience.title, experience.company]
-                      .filter(Boolean)
-                      .join(" at ") || "Experience"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {[experience.start_date, experience.end_date]
-                      .filter(Boolean)
-                      .join(" – ")}
-                  </p>
-                  {experience.description && (
-                    <p className="mt-1 mb-3 whitespace-pre-wrap text-gray-700">
-                      {experience.description}
-                    </p>
-                  )}
-                </div>
-              ),
-            )}
-
-            {resumeTarget.ranking_rationale && (
-              <>
-                <Divider titlePlacement="start">AI Assessment</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.ranking_rationale}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <p className="font-semibold text-green-700 mb-2">
-                      Strengths
-                    </p>
-                    {(resumeTarget.ranking_strengths ?? []).map((strength) => (
-                      <p
-                        className="text-sm text-gray-700 mb-1"
-                        key={strength}
-                      >
-                        • {strength}
-                      </p>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-orange-700 mb-2">Gaps</p>
-                    {(resumeTarget.ranking_gaps ?? []).map((gap) => (
-                      <p className="text-sm text-gray-700 mb-1" key={gap}>
-                        • {gap}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {resumeTarget.cover_letter && (
-              <>
-                <Divider titlePlacement="start">Cover Letter</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.cover_letter}
-                </p>
-              </>
-            )}
-          </div>
-        )}
-      </Modal>
-
       <MyModal
         open={deleteTarget != null}
-        title="Remove Job"
-        description={`Remove ${deleteTarget?.title ?? "this job"} from active recruitment?`}
-        subDescription="The position and its applications will no longer appear in this dashboard."
-        okText="Remove Job"
+        title="Delete Job Permanently"
+        description={`Permanently delete ${deleteTarget?.title ?? "this job"}?`}
+        subDescription="This permanently deletes the job and all of its applications. This action cannot be undone."
+        okText="Delete Permanently"
         okIcon={<DeleteOutlined />}
         danger
         confirmLoading={isDeletingJob}

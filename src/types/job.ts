@@ -7,8 +7,6 @@ export type JobEmploymentType =
 
 export type JobWorkplaceType = "onsite" | "remote" | "hybrid";
 
-export type JobStatus = "draft" | "open" | "closed";
-
 export type SalaryPeriod = "hourly" | "monthly" | "yearly";
 
 export interface Job {
@@ -21,7 +19,6 @@ export interface Job {
   location: string | null;
   employment_type: JobEmploymentType;
   workplace_type: JobWorkplaceType;
-  status: JobStatus;
   salary_min: number | null;
   salary_max: number | null;
   salary_currency: string | null;
@@ -44,7 +41,6 @@ export interface JobCreatePayload {
   location?: string | null;
   employment_type?: JobEmploymentType;
   workplace_type?: JobWorkplaceType;
-  status?: JobStatus;
   salary_min?: number | null;
   salary_max?: number | null;
   salary_currency?: string | null;
@@ -53,11 +49,10 @@ export interface JobCreatePayload {
   requirements?: string | null;
   responsibilities?: string | null;
   benefits?: string | null;
+  is_active?: boolean;
 }
 
-export type JobUpdatePayload = Partial<JobCreatePayload> & {
-  is_active?: boolean;
-};
+export type JobUpdatePayload = Partial<JobCreatePayload>;
 
 export type JobApplicationStatus =
   | "submitted"
