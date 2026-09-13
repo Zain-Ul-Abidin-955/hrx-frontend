@@ -32,6 +32,11 @@ import { isAxiosError } from "axios";
 import Link from "next/link";
 import CustomInput from "@/components/input/CustomInput";
 import Panel from "@/components/dashboard/Panel";
+import {
+  DefinitionGrid,
+  FormSection,
+  ProseSection,
+} from "@/components/dashboard/DefinitionGrid";
 import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 import { LoadingSpinner } from "@/components/loader/Loading";
 import MyModal from "@/components/modal/MyModal";
@@ -700,7 +705,18 @@ const Recruitment: React.FC = () => {
       </Panel>
 
       <Modal
-        title={editingJob ? "Edit Job" : "Post New Job"}
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">
+              {editingJob ? "Edit job" : "Post a job"}
+            </p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              {editingJob
+                ? "Changes go live on the public job page immediately."
+                : "Published roles appear on your careers page and start collecting applications."}
+            </p>
+          </div>
+        }
         open={isJobModalOpen}
         onCancel={() => {
           if (isSavingJob) return;
@@ -709,11 +725,22 @@ const Recruitment: React.FC = () => {
           jobForm.resetFields();
         }}
         onOk={() => jobForm.submit()}
-        okText={editingJob ? "Save Changes" : "Post Job"}
+        okText={editingJob ? "Save changes" : "Post job"}
         confirmLoading={isSavingJob}
         width={760}
         centered
         destroyOnHidden
+        // The body scrolls vertically, which makes it a scroll container — and
+        // AntD's `Row gutter` negative margins then push 8px past its right
+        // edge. The inline padding gives those margins room to land in.
+        styles={{
+          body: {
+            maxHeight: "68vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+            paddingInline: 8,
+          },
+        }}
       >
         <Form<JobFormValues>
           form={jobForm}
@@ -728,215 +755,247 @@ const Recruitment: React.FC = () => {
             })
           }
         >
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <CustomInput
-                name="title"
-                label="Job Title"
-                placeholder="e.g. Senior Software Engineer"
-              />
-            </Col>
-            <Col xs={24} md={12}>
-              <CustomInput
-                name="department"
-                label="Department"
-                placeholder="e.g. Engineering"
-                required={false}
-              />
-            </Col>
-          </Row>
-          <CustomInput
-            name="description"
-            label="Description"
-            placeholder="Describe the role and its purpose"
-            type="textarea"
-            rows={4}
-          />
-          <Form.Item
-            name="is_active"
-            label={
-              <span className="text-secondaryTextColor font-medium">
-                Visibility
-              </span>
-            }
-          >
-            <Select
-              size="large"
-              options={[
-                { label: "Active — visible publicly", value: true },
-                { label: "Inactive — hidden publicly", value: false },
-              ]}
+          <FormSection title="The role">
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <CustomInput
+                  name="title"
+                  label="Job Title"
+                  placeholder="e.g. Senior Software Engineer"
+                />
+              </Col>
+              <Col xs={24} md={12}>
+                <CustomInput
+                  name="department"
+                  label="Department"
+                  placeholder="e.g. Engineering"
+                  required={false}
+                />
+              </Col>
+            </Row>
+            <CustomInput
+              name="description"
+              label="Description"
+              placeholder="Describe the role and its purpose"
+              type="textarea"
+              rows={4}
             />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <CustomInput
-                name="location"
-                label="Location"
-                placeholder="e.g. Lahore, Pakistan"
-                required={false}
-              />
-            </Col>
-            <Col xs={24} md={12}>
-              <CustomInput
-                name="experience_level"
-                label="Experience Level"
-                placeholder="e.g. Senior, 5+ years"
-                required={false}
-              />
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="employment_type"
-                label={
-                  <span className="text-secondaryTextColor font-medium">
-                    Employment Type
-                  </span>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select an employment type",
-                  },
+            <Form.Item
+              name="is_active"
+              label={
+                <span className="text-secondaryTextColor font-medium">
+                  Visibility
+                </span>
+              }
+            >
+              <Select
+                size="large"
+                options={[
+                  { label: "Active — visible publicly", value: true },
+                  { label: "Inactive — hidden publicly", value: false },
                 ]}
-              >
-                <Select size="large" options={EMPLOYMENT_TYPE_OPTIONS} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="workplace_type"
-                label={
-                  <span className="text-secondaryTextColor font-medium">
-                    Workplace Type
-                  </span>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a workplace type",
-                  },
-                ]}
-              >
-                <Select size="large" options={WORKPLACE_TYPE_OPTIONS} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} md={6}>
-              <Form.Item
-                name="salary_min"
-                label={
-                  <span className="text-secondaryTextColor font-medium">
-                    Minimum Salary
-                  </span>
-                }
-              >
-                <InputNumber
-                  min={0}
-                  precision={0}
-                  className="!w-full"
-                  size="large"
-                  placeholder="Minimum"
+              />
+            </Form.Item>
+          </FormSection>
+
+          <FormSection title="Where and how" className="mt-6">
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <CustomInput
+                  name="location"
+                  label="Location"
+                  placeholder="e.g. Lahore, Pakistan"
+                  required={false}
                 />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item
-                name="salary_max"
-                dependencies={["salary_min"]}
-                label={
-                  <span className="text-secondaryTextColor font-medium">
-                    Maximum Salary
-                  </span>
-                }
-                rules={[
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const minimum = getFieldValue("salary_min");
-                      if (
-                        value == null ||
-                        minimum == null ||
-                        value >= minimum
-                      ) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        new Error(
-                          "Maximum must be greater than or equal to minimum",
-                        ),
-                      );
+              </Col>
+              <Col xs={24} md={12}>
+                <CustomInput
+                  name="experience_level"
+                  label="Experience Level"
+                  placeholder="e.g. Senior, 5+ years"
+                  required={false}
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="employment_type"
+                  label={
+                    <span className="text-secondaryTextColor font-medium">
+                      Employment Type
+                    </span>
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select an employment type",
                     },
-                  }),
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  precision={0}
-                  className="!w-full"
-                  size="large"
-                  placeholder="Maximum"
+                  ]}
+                >
+                  <Select size="large" options={EMPLOYMENT_TYPE_OPTIONS} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="workplace_type"
+                  label={
+                    <span className="text-secondaryTextColor font-medium">
+                      Workplace Type
+                    </span>
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select a workplace type",
+                    },
+                  ]}
+                >
+                  <Select size="large" options={WORKPLACE_TYPE_OPTIONS} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </FormSection>
+
+          <FormSection
+            title="Compensation"
+            hint="optional — leave blank to show “Not disclosed”"
+            className="mt-6"
+          >
+            <Row gutter={16}>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  name="salary_min"
+                  label={
+                    <span className="text-secondaryTextColor font-medium">
+                      Minimum Salary
+                    </span>
+                  }
+                >
+                  <InputNumber
+                    min={0}
+                    precision={0}
+                    className="!w-full"
+                    size="large"
+                    placeholder="Minimum"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  name="salary_max"
+                  dependencies={["salary_min"]}
+                  label={
+                    <span className="text-secondaryTextColor font-medium">
+                      Maximum Salary
+                    </span>
+                  }
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        const minimum = getFieldValue("salary_min");
+                        if (
+                          value == null ||
+                          minimum == null ||
+                          value >= minimum
+                        ) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(
+                          new Error(
+                            "Maximum must be greater than or equal to minimum",
+                          ),
+                        );
+                      },
+                    }),
+                  ]}
+                >
+                  <InputNumber
+                    min={0}
+                    precision={0}
+                    className="!w-full"
+                    size="large"
+                    placeholder="Maximum"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <CustomInput
+                  name="salary_currency"
+                  label="Currency"
+                  placeholder="USD"
+                  required={false}
                 />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <CustomInput
-                name="salary_currency"
-                label="Currency"
-                placeholder="USD"
-                required={false}
-              />
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item
-                name="salary_period"
-                label={
-                  <span className="text-secondaryTextColor font-medium">
-                    Salary Period
-                  </span>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a salary period",
-                  },
-                ]}
-              >
-                <Select size="large" options={SALARY_PERIOD_OPTIONS} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <CustomInput
-            name="requirements"
-            label="Requirements"
-            placeholder="List the skills and qualifications required"
-            type="textarea"
-            rows={3}
-            required={false}
-          />
-          <CustomInput
-            name="responsibilities"
-            label="Responsibilities"
-            placeholder="List the main responsibilities"
-            type="textarea"
-            rows={3}
-            required={false}
-          />
-          <CustomInput
-            name="benefits"
-            label="Benefits"
-            placeholder="Describe benefits and perks"
-            type="textarea"
-            rows={3}
-            required={false}
-          />
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  name="salary_period"
+                  label={
+                    <span className="text-secondaryTextColor font-medium">
+                      Salary Period
+                    </span>
+                  }
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select a salary period",
+                    },
+                  ]}
+                >
+                  <Select size="large" options={SALARY_PERIOD_OPTIONS} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </FormSection>
+
+          <FormSection title="The detail" className="mt-6">
+            <CustomInput
+              name="requirements"
+              label="Requirements"
+              placeholder="List the skills and qualifications required"
+              type="textarea"
+              rows={3}
+              required={false}
+            />
+            <CustomInput
+              name="responsibilities"
+              label="Responsibilities"
+              placeholder="List the main responsibilities"
+              type="textarea"
+              rows={3}
+              required={false}
+            />
+            <CustomInput
+              name="benefits"
+              label="Benefits"
+              placeholder="Describe benefits and perks"
+              type="textarea"
+              rows={3}
+              required={false}
+            />
+          </FormSection>
         </Form>
       </Modal>
 
       <Modal
-        title={selectedJob?.title ?? "Job Details"}
+        title={
+          selectedJob ? (
+            <div className="flex min-w-0 items-center gap-2.5 pr-8">
+              <span className="truncate text-base font-semibold text-blackColor">
+                {selectedJob.title}
+              </span>
+              <Tag
+                variant="filled"
+                className="!m-0 !rounded-md !px-2 !py-0.5 !text-xs !font-medium"
+                color={selectedJob.is_active ? "success" : "default"}
+              >
+                {selectedJob.is_active ? "Live" : "Inactive"}
+              </Tag>
+            </div>
+          ) : (
+            "Job details"
+          )
+        }
         open={selectedJob != null}
         onCancel={() => setSelectedJob(null)}
         width={760}
@@ -990,45 +1049,24 @@ const Recruitment: React.FC = () => {
       >
         {selectedJob && (
           <div className="pt-2">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-[#ECEEF3] p-4 sm:grid-cols-3">
-              {(
+            <DefinitionGrid
+              items={[
+                ["Department", selectedJob.department || "—"],
+                ["Location", selectedJob.location || "—"],
+                ["Employment", humanize(selectedJob.employment_type)],
+                ["Workplace", humanize(selectedJob.workplace_type)],
+                ["Experience", selectedJob.experience_level || "—"],
+                ["Salary", formatSalary(selectedJob)],
                 [
-                  ["Department", selectedJob.department || "—"],
-                  ["Location", selectedJob.location || "—"],
-                  ["Employment", humanize(selectedJob.employment_type)],
-                  ["Workplace", humanize(selectedJob.workplace_type)],
-                  ["Experience", selectedJob.experience_level || "—"],
-                  ["Salary", formatSalary(selectedJob)],
-                  [
-                    "Applications",
-                    String((applicationsByJob[selectedJob.id] ?? []).length),
-                  ],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label} className="min-w-0">
-                  <dt className="text-[10px] font-medium uppercase tracking-wide text-darkGrayColor">
-                    {label}
-                  </dt>
-                  <dd className="mt-1 truncate text-sm text-blackColor">
-                    {value}
-                  </dd>
-                </div>
-              ))}
-              <div className="min-w-0">
-                <dt className="text-[10px] font-medium uppercase tracking-wide text-darkGrayColor">
-                  Status
-                </dt>
-                <dd className="mt-1">
-                  <Tag
-                    variant="filled"
-                    className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
-                    color={selectedJob.is_active ? "success" : "default"}
-                  >
-                    {selectedJob.is_active ? "Active" : "Inactive"}
-                  </Tag>
-                </dd>
-              </div>
-            </dl>
+                  "Applications",
+                  (applicationsByJob[selectedJob.id] ?? []).length,
+                ],
+                [
+                  "Posted",
+                  new Date(selectedJob.created_at).toLocaleDateString(),
+                ],
+              ]}
+            />
 
             {(
               [
@@ -1039,14 +1077,9 @@ const Recruitment: React.FC = () => {
               ] as const
             ).map(([heading, body]) =>
               body ? (
-                <section key={heading} className="mt-6">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-darkGrayColor">
-                    {heading}
-                  </h3>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-secondaryTextColor">
-                    {body}
-                  </p>
-                </section>
+                <ProseSection key={heading} heading={heading}>
+                  {body}
+                </ProseSection>
               ) : null,
             )}
           </div>

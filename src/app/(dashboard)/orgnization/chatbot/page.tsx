@@ -3,16 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Avatar,
   Button,
-  Card,
-  Descriptions,
-  Empty,
   Input,
   Popconfirm,
   Segmented,
   Spin,
-  Tag,
   Tooltip,
   message as toast,
 } from "antd";
@@ -21,13 +16,13 @@ import {
   CheckOutlined,
   DeleteOutlined,
   EditOutlined,
+  InboxOutlined,
   MessageOutlined,
   PlusOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
   SendOutlined,
   StopOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -44,6 +39,10 @@ import {
   streamAIConversationTurn,
 } from "@/api/collection/ai";
 import { LoadingSpinner } from "@/components/loader/Loading";
+import Panel from "@/components/dashboard/Panel";
+import { DefinitionGrid } from "@/components/dashboard/DefinitionGrid";
+import { getNameInitial } from "@/utils/getNameInitial";
+import { getUserDisplayName } from "@/utils/profileHelpers";
 import useUserStore from "@/store/userStore";
 import type {
   AIActionProposal,
@@ -98,12 +97,16 @@ function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error && error.message ? error.message : fallback;
   }
   const data = error.response?.data as
-    | { message?: string; detail?: string | { msg?: string }[] }
-    | undefined;
+    { message?: string; detail?: string | { msg?: string }[] } | undefined;
   if (typeof data?.message === "string") return data.message;
   if (typeof data?.detail === "string") return data.detail;
   if (Array.isArray(data?.detail)) {
-    return data.detail.map((item) => item?.msg).filter(Boolean).join(", ") || fallback;
+    return (
+      data.detail
+        .map((item) => item?.msg)
+        .filter(Boolean)
+        .join(", ") || fallback
+    );
   }
   return fallback;
 }
@@ -135,6 +138,46 @@ function displayValue(value: unknown): string {
   return String(value);
 }
 
+/** The assistant's gradient mark — same identity as the rail and landing page. */
+function BotMark({ size = 32 }: { size?: number }) {
+  return (
+    <span
+      style={{ width: size, height: size, fontSize: size * 0.42 }}
+      className="flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accentColor to-glowColor text-white"
+    >
+      <RobotOutlined />
+    </span>
+  );
+}
+
+/** Centred empty/permission state shared by the rail and the thread. */
+function EmptyState({
+  icon,
+  title,
+  body,
+  action,
+  className = "",
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  body?: string;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-center gap-2 px-6 py-12 text-center ${className}`}
+    >
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+        {icon ?? <InboxOutlined />}
+      </span>
+      <p className="mt-1 text-sm font-medium text-blackColor">{title}</p>
+      {body && <p className="max-w-sm text-sm text-grayColor">{body}</p>}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
+
 function MarkdownMessage({ content }: { content: string }) {
   return (
     <div className="max-w-full text-sm leading-6 [overflow-wrap:anywhere]">
@@ -142,10 +185,14 @@ function MarkdownMessage({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="mb-3 mt-4 text-xl font-bold first:mt-0">{children}</h1>
+            <h1 className="mb-3 mt-4 text-xl font-bold first:mt-0">
+              {children}
+            </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mb-2 mt-4 text-lg font-bold first:mt-0">{children}</h2>
+            <h2 className="mb-2 mt-4 text-lg font-bold first:mt-0">
+              {children}
+            </h2>
           ),
           h3: ({ children }) => (
             <h3 className="mb-2 mt-4 text-base font-semibold first:mt-0">
@@ -156,10 +203,14 @@ function MarkdownMessage({ content }: { content: string }) {
             <p className="mb-3 whitespace-pre-wrap last:mb-0">{children}</p>
           ),
           strong: ({ children }) => (
-            <strong className="font-semibold text-gray-900">{children}</strong>
+            <strong className="font-semibold text-blackColor">
+              {children}
+            </strong>
           ),
           ul: ({ children }) => (
-            <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>
+            <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">
+              {children}
+            </ul>
           ),
           ol: ({ children }) => (
             <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">
@@ -167,9 +218,9 @@ function MarkdownMessage({ content }: { content: string }) {
             </ol>
           ),
           li: ({ children }) => <li className="pl-1">{children}</li>,
-          hr: () => <hr className="my-4 border-gray-200" />,
+          hr: () => <hr className="my-4 border-[#ECEEF3]" />,
           blockquote: ({ children }) => (
-            <blockquote className="my-3 border-l-4 border-blue-300 bg-blue-50 px-3 py-2 text-gray-700">
+            <blockquote className="my-3 rounded-r-lg border-l-2 border-accentColor/50 bg-accentColor/[0.06] px-3 py-2 text-secondaryTextColor">
               {children}
             </blockquote>
           ),
@@ -178,7 +229,7 @@ function MarkdownMessage({ content }: { content: string }) {
               href={href}
               target="_blank"
               rel="noreferrer"
-              className="text-blue-600 underline underline-offset-2"
+              className="!text-accentDeepColor underline underline-offset-2"
             >
               {children}
             </a>
@@ -187,29 +238,29 @@ function MarkdownMessage({ content }: { content: string }) {
             className ? (
               <code className={className}>{children}</code>
             ) : (
-              <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.85em] text-purple-700">
+              <code className="rounded bg-accentColor/10 px-1.5 py-0.5 font-mono text-[0.85em] text-accentDeepColor">
                 {children}
               </code>
             ),
           pre: ({ children }) => (
-            <pre className="my-3 max-w-full overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs leading-5 text-gray-100">
+            <pre className="my-3 max-w-full overflow-x-auto rounded-xl bg-nightColor p-3 text-xs leading-5 text-lightColor">
               {children}
             </pre>
           ),
           table: ({ children }) => (
             <div className="my-3 max-w-full overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-xs">
+              <table className="min-w-full border-collapse overflow-hidden rounded-lg text-left text-xs">
                 {children}
               </table>
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-gray-200 bg-gray-100 px-3 py-2 font-semibold">
+            <th className="border border-[#ECEEF3] bg-offWhiteColor px-3 py-2 font-semibold text-secondaryTextColor">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-gray-200 px-3 py-2">{children}</td>
+            <td className="border border-[#ECEEF3] px-3 py-2">{children}</td>
           ),
         }}
       >
@@ -255,25 +306,29 @@ function ResultRecord({
     .slice(0, 6);
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
-      <p className="break-words font-semibold text-gray-800 [overflow-wrap:anywhere]">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-[#ECEEF3] bg-whiteColor p-3 [overflow-wrap:anywhere]">
+      <p className="break-words text-sm font-medium text-blackColor [overflow-wrap:anywhere]">
         {recordTitle(record, index)}
       </p>
       {details.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {details.map(([key, value]) => (
-            <Tag
+            <span
               key={key}
-              color={key.includes("score") ? "purple" : "default"}
-              className="!m-0 !h-auto !max-w-full !whitespace-normal !break-words [overflow-wrap:anywhere]"
+              className={`max-w-full whitespace-normal break-words rounded-md px-2 py-0.5 text-xs [overflow-wrap:anywhere] ${
+                key.includes("score")
+                  ? "bg-accentColor/10 font-medium text-accentDeepColor"
+                  : "bg-offWhiteColor text-grayColor"
+              }`}
             >
-              {humanize(key)}: {displayValue(value)}
-            </Tag>
+              <span className="text-darkGrayColor">{humanize(key)}:</span>{" "}
+              {displayValue(value)}
+            </span>
           ))}
         </div>
       )}
       {typeof record.snippet === "string" && (
-        <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs text-gray-600 [overflow-wrap:anywhere]">
+        <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs text-grayColor [overflow-wrap:anywhere]">
           {record.snippet}
         </p>
       )}
@@ -286,13 +341,15 @@ function StructuredResultCard({ result }: { result: AIStructuredResult }) {
   const data = result.data;
 
   return (
-    <div className="mt-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-blue-100 bg-blue-50/60 p-3 [overflow-wrap:anywhere]">
+    <div className="mt-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-accentColor/20 bg-accentColor/[0.05] p-3 [overflow-wrap:anywhere]">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+        <p className="text-xs font-semibold uppercase tracking-wide text-accentDeepColor">
           {humanize(result.kind)}
         </p>
         {typeof result.count === "number" && (
-          <Tag color="blue">{result.count} total</Tag>
+          <span className="rounded-md bg-accentColor/10 px-2 py-0.5 text-xs font-medium text-accentDeepColor">
+            {result.count} total
+          </span>
         )}
       </div>
 
@@ -307,27 +364,29 @@ function StructuredResultCard({ result }: { result: AIStructuredResult }) {
                   index={index}
                 />
               ) : (
-                <p key={`${result.kind}-${index}`} className="text-sm text-gray-700">
+                <p
+                  key={`${result.kind}-${index}`}
+                  className="text-sm text-gray-700"
+                >
                   {displayValue(item)}
                 </p>
               ),
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No matching records found.</p>
+          <p className="text-sm text-darkGrayColor">
+            No matching records found.
+          </p>
         )
       ) : data && typeof data === "object" ? (
-        <Descriptions size="small" column={1} bordered>
-          {Object.entries(data as Record<string, unknown>).map(([key, value]) => (
-            <Descriptions.Item key={key} label={humanize(key)}>
-              <span className="break-words [overflow-wrap:anywhere]">
-                {displayValue(value)}
-              </span>
-            </Descriptions.Item>
-          ))}
-        </Descriptions>
+        <DefinitionGrid
+          className="!bg-whiteColor"
+          items={Object.entries(data as Record<string, unknown>).map(
+            ([key, value]) => [humanize(key), displayValue(value)],
+          )}
+        />
       ) : (
-        <p className="break-words text-sm text-gray-700 [overflow-wrap:anywhere]">
+        <p className="break-words text-sm text-secondaryTextColor [overflow-wrap:anywhere]">
           {displayValue(data)}
         </p>
       )}
@@ -362,28 +421,28 @@ function ActionProposalCard({
   const warning = state?.result?.warning;
 
   return (
-    <div className="mt-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-amber-200 bg-amber-50 [overflow-wrap:anywhere]">
-      <div className="border-b border-amber-200 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-              Approval required
+    <div className="mt-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-amber-300/70 bg-amber-50/70 [overflow-wrap:anywhere]">
+      <div className="border-b border-amber-300/60 px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+              <SafetyCertificateOutlined /> Approval required
             </p>
-            <p className="mt-1 font-semibold text-gray-800">
+            <p className="mt-1.5 text-sm font-medium text-blackColor">
               {proposal.preview.summary || humanize(proposal.operation)}
             </p>
           </div>
-          <Tag
-            color={
+          <span
+            className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
               status === "executed"
-                ? "green"
+                ? "bg-emerald-100 text-emerald-800"
                 : status === "pending"
-                  ? "gold"
-                  : "default"
-            }
+                  ? "bg-amber-200/70 text-amber-900"
+                  : "bg-offWhiteColor text-grayColor"
+            }`}
           >
             {humanize(status)}
-          </Tag>
+          </span>
         </div>
       </div>
 
@@ -393,10 +452,10 @@ function ActionProposalCard({
             .slice(0, 10)
             .map(([key, value]) => (
               <div key={key} className="min-w-0">
-                <p className="text-[11px] font-medium uppercase text-gray-500">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800/70">
                   {humanize(key)}
                 </p>
-                <p className="break-words text-sm text-gray-700 [overflow-wrap:anywhere]">
+                <p className="mt-0.5 break-words text-sm text-blackColor [overflow-wrap:anywhere]">
                   {displayValue(value)}
                 </p>
               </div>
@@ -405,7 +464,7 @@ function ActionProposalCard({
       )}
 
       {status === "pending" && (
-        <div className="flex justify-end gap-2 border-t border-amber-200 px-4 py-3">
+        <div className="flex justify-end gap-2 border-t border-amber-300/60 px-4 py-3">
           <Button size="small" disabled={busy} onClick={onCancel}>
             Cancel
           </Button>
@@ -421,7 +480,7 @@ function ActionProposalCard({
               size="small"
               icon={<CheckOutlined />}
               loading={busy}
-              className="!bg-amber-600"
+              className="!border-amber-600 !bg-amber-600 hover:!border-amber-700 hover:!bg-amber-700"
             >
               Confirm
             </Button>
@@ -487,7 +546,9 @@ export default function ChatBot() {
 
   const selectedConversation =
     conversationDetail ||
-    conversations.find((conversation) => conversation.id === selectedConversationId);
+    conversations.find(
+      (conversation) => conversation.id === selectedConversationId,
+    );
 
   useEffect(() => {
     if (isLoadingConversations) return;
@@ -526,7 +587,9 @@ export default function ChatBot() {
       setInputValue("");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Could not start a new conversation."));
+      toast.error(
+        getErrorMessage(error, "Could not start a new conversation."),
+      );
     },
   });
 
@@ -583,7 +646,9 @@ export default function ChatBot() {
       });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Could not change conversation mode."));
+      toast.error(
+        getErrorMessage(error, "Could not change conversation mode."),
+      );
     },
   });
 
@@ -672,7 +737,9 @@ export default function ChatBot() {
           }
           if (event === "error") {
             const errorText =
-              typeof data.message === "string" ? data.message : "AI turn failed";
+              typeof data.message === "string"
+                ? data.message
+                : "AI turn failed";
             updateAssistantMessage((item) => ({
               ...item,
               status: "failed",
@@ -688,11 +755,14 @@ export default function ChatBot() {
         controller.signal,
       );
     } catch (error) {
-      const cancelled = error instanceof DOMException && error.name === "AbortError";
+      const cancelled =
+        error instanceof DOMException && error.name === "AbortError";
       updateAssistantMessage((item) => ({
         ...item,
         status: cancelled ? "cancelled" : "failed",
-        error: cancelled ? "Response stopped" : getErrorMessage(error, "AI turn failed"),
+        error: cancelled
+          ? "Response stopped"
+          : getErrorMessage(error, "AI turn failed"),
         content:
           item.content ||
           (cancelled
@@ -756,7 +826,9 @@ export default function ChatBot() {
   };
 
   const quickPrompts =
-    selectedConversation?.mode === "action_mode" ? ACTION_PROMPTS : READ_PROMPTS;
+    selectedConversation?.mode === "action_mode"
+      ? ACTION_PROMPTS
+      : READ_PROMPTS;
 
   const renderedMessages = useMemo(
     () => messages.filter((item) => item.role !== "tool"),
@@ -767,67 +839,87 @@ export default function ChatBot() {
 
   if (!canUseAssistant) {
     return (
-      <Card>
-        <Empty description="The AI assistant is available to organization administrators and HR managers." />
-      </Card>
+      <div className="hrx-card">
+        <EmptyState
+          className="py-14"
+          title="The assistant is not available for your role"
+          body="It is open to organization administrators and HR managers."
+        />
+      </div>
     );
   }
 
+  const userInitial = getNameInitial(getUserDisplayName(user));
+
+  const newConversationButton = (
+    <Button
+      type="primary"
+      icon={<PlusOutlined />}
+      loading={createConversation.isPending}
+      disabled={isStreaming}
+      onClick={() => createConversation.mutate()}
+    >
+      New conversation
+    </Button>
+  );
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      {/* ---------- Page header ---------- */}
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">AI Assistant</h1>
-          <p className="mt-1 text-gray-600">
-            Ask questions about your HRX data or safely prepare HR actions
+          <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+            AI Assistant
+          </h1>
+          <p className="mt-1 text-sm text-grayColor">
+            Ask questions about your HRX data, or prepare HR actions for review.
           </p>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<PlusOutlined />}
-          className="!bg-primaryColor"
-          loading={createConversation.isPending}
-          disabled={isStreaming}
-          onClick={() => createConversation.mutate()}
-        >
-          New conversation
-        </Button>
-      </div>
+        <div className="shrink-0">{newConversationButton}</div>
+      </header>
 
       <div className="grid min-h-[680px] grid-cols-1 gap-4 lg:h-[calc(100vh-210px)] lg:max-h-[900px] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card
+        {/* ---------- Conversation rail ---------- */}
+        <Panel
+          flush
+          title="Conversations"
+          icon={<MessageOutlined />}
           className="h-full overflow-hidden"
-          styles={{ body: { height: "100%", padding: 0 } }}
+          action={
+            <Tooltip title="New conversation">
+              <Button
+                type="text"
+                size="small"
+                icon={<PlusOutlined />}
+                loading={createConversation.isPending}
+                disabled={isStreaming}
+                onClick={() => createConversation.mutate()}
+              />
+            </Tooltip>
+          }
         >
-          <div className="border-b border-gray-100 px-4 py-3">
-            <p className="font-semibold text-gray-800">Conversations</p>
-          </div>
-          <div className="max-h-[620px] overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {isLoadingConversations ? (
               <div className="flex justify-center py-10">
                 <Spin />
               </div>
             ) : isConversationsError ? (
-              <Alert type="error" showIcon message="Could not load conversations" />
+              <EmptyState
+                title="Could not load conversations"
+                body="Something went wrong fetching your history. Try again in a moment."
+              />
             ) : conversations.length === 0 ? (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="No conversations yet"
-              >
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  loading={createConversation.isPending}
-                  onClick={() => createConversation.mutate()}
-                >
-                  Start one
-                </Button>
-              </Empty>
+              <EmptyState
+                icon={<MessageOutlined />}
+                title="No conversations yet"
+                body="Start one to ask the assistant about your workforce."
+                action={newConversationButton}
+              />
             ) : (
               <div className="space-y-1">
                 {conversations.map((conversation) => {
                   const selected = conversation.id === selectedConversationId;
+                  const isActionMode = conversation.mode === "action_mode";
                   return (
                     <div
                       role="button"
@@ -848,30 +940,36 @@ export default function ChatBot() {
                           setMessages([]);
                         }
                       }}
-                      className={`group w-full rounded-xl px-3 py-3 text-left transition-colors ${
+                      className={`group w-full cursor-pointer rounded-xl px-3 py-2.5 text-left transition-colors ${
                         selected
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-accentColor/10 ring-1 ring-inset ring-accentColor/25"
+                          : "hover:bg-offWhiteColor"
                       }`}
                     >
                       <div className="flex items-start gap-2">
-                        <MessageOutlined className="mt-1 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
+                          <p
+                            className={`truncate text-sm ${
+                              selected
+                                ? "font-medium text-blackColor"
+                                : "text-secondaryTextColor"
+                            }`}
+                          >
                             {conversation.title || "New conversation"}
                           </p>
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-400">
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span
+                              className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
+                                isActionMode
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-accentColor/10 text-accentDeepColor"
+                              }`}
+                            >
+                              {isActionMode ? "Actions" : "Ask"}
+                            </span>
+                            <span className="text-xs text-darkGrayColor">
                               {formatDate(conversation.updated_at)}
                             </span>
-                            <Tag
-                              bordered={false}
-                              color={
-                                conversation.mode === "action_mode" ? "orange" : "blue"
-                              }
-                            >
-                              {conversation.mode === "action_mode" ? "Actions" : "Ask"}
-                            </Tag>
                           </div>
                         </div>
                         <Popconfirm
@@ -891,7 +989,8 @@ export default function ChatBot() {
                               size="small"
                               danger
                               icon={<DeleteOutlined />}
-                              className="opacity-0 group-hover:opacity-100"
+                              aria-label="Delete conversation"
+                              className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                               onClick={(event) => event.stopPropagation()}
                             />
                           </Tooltip>
@@ -903,43 +1002,31 @@ export default function ChatBot() {
               </div>
             )}
           </div>
-        </Card>
+        </Panel>
 
-        <Card
-          className="h-full overflow-hidden"
-          styles={{ body: { height: "100%", padding: 0 } }}
-        >
+        {/* ---------- Thread ---------- */}
+        <section className="hrx-card h-full overflow-hidden p-0">
           {!selectedConversation ? (
-            <div className="flex min-h-[680px] items-center justify-center p-6">
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Start a conversation to use the HRX assistant"
-              >
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  loading={createConversation.isPending}
-                  onClick={() => createConversation.mutate()}
-                >
-                  New conversation
-                </Button>
-              </Empty>
+            <div className="flex min-h-[680px] items-center justify-center">
+              <EmptyState
+                icon={<RobotOutlined />}
+                title="No conversation selected"
+                body="Start a conversation to use the HRX assistant."
+                action={newConversationButton}
+              />
             </div>
           ) : (
             <div className="flex h-full min-h-[680px] flex-col">
-              <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    size={42}
-                    icon={<RobotOutlined />}
-                    className="!bg-blue-600"
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-800">
+              {/* thread header */}
+              <div className="flex flex-col gap-3 border-b border-[#ECEEF3] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BotMark size={36} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-blackColor">
                       {selectedConversation.title || "New conversation"}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Organization-scoped · conversation history saved
+                    <p className="truncate text-xs text-darkGrayColor">
+                      Organization-scoped · history saved
                     </p>
                   </div>
                 </div>
@@ -962,40 +1049,38 @@ export default function ChatBot() {
               </div>
 
               {selectedConversation.mode === "action_mode" && (
-                <Alert
-                  banner
-                  showIcon
-                  icon={<SafetyCertificateOutlined />}
-                  type="warning"
-                  message="Action mode prepares changes for your review. Nothing is executed without confirmation."
-                />
+                <div className="flex items-center gap-2 border-b border-amber-300/60 bg-amber-50/70 px-5 py-2.5 text-xs text-amber-900">
+                  <SafetyCertificateOutlined className="shrink-0" />
+                  <span>
+                    Action mode prepares changes for your review. Nothing is
+                    executed without confirmation.
+                  </span>
+                </div>
               )}
 
               <div
                 ref={messageAreaRef}
-                className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-gray-50/50 px-4 py-5 sm:px-6"
+                className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-offWhiteColor px-4 py-5 sm:px-6"
               >
                 {isConversationError ? (
-                  <Alert
-                    type="error"
-                    showIcon
-                    message="Could not load this conversation"
+                  <EmptyState
+                    title="Could not load this conversation"
+                    body="Something went wrong fetching the messages. Try again in a moment."
                   />
                 ) : isLoadingConversation && messages.length === 0 ? (
                   <div className="flex justify-center py-16">
                     <Spin />
                   </div>
                 ) : renderedMessages.length === 0 ? (
-                  <div className="mx-auto flex max-w-xl flex-col items-center py-14 text-center">
-                    <div className="mb-4 rounded-2xl bg-blue-100 p-4">
-                      <RobotOutlined className="text-4xl text-blue-600" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-800">
+                  <div className="mx-auto flex max-w-xl flex-col items-center py-12 text-center">
+                    <BotMark size={52} />
+                    <h2 className="mt-4 text-lg font-semibold text-blackColor">
                       How can I help with HRX today?
                     </h2>
-                    <p className="mt-2 text-sm text-gray-500">
-                      I can inspect organization, employee, job, and application data.
-                      Switch to Actions when you want to prepare a controlled change.
+                    <p className="mt-2 max-w-md text-sm text-grayColor">
+                      I can inspect organization, employee, job, and application
+                      data. Switch to Actions when you want to prepare a
+                      controlled change.
                     </p>
                     <div className="mt-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                       {quickPrompts.map((prompt) => (
@@ -1003,7 +1088,7 @@ export default function ChatBot() {
                           type="button"
                           key={prompt}
                           onClick={() => setInputValue(prompt)}
-                          className="rounded-xl border border-gray-200 bg-white p-3 text-left text-sm text-gray-700 transition hover:border-blue-300 hover:text-blue-700"
+                          className="rounded-xl border border-[#ECEEF3] bg-whiteColor p-3 text-left text-sm text-secondaryTextColor transition-colors hover:border-accentColor/40 hover:text-accentDeepColor"
                         >
                           {prompt}
                         </button>
@@ -1023,16 +1108,19 @@ export default function ChatBot() {
                             isUser ? "flex-row-reverse" : ""
                           }`}
                         >
-                          <Avatar
-                            icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-                            className={isUser ? "!bg-purple-500" : "!bg-blue-600"}
-                          />
+                          {isUser ? (
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-xs font-semibold text-accentDeepColor">
+                              {userInitial}
+                            </span>
+                          ) : (
+                            <BotMark />
+                          )}
                           <div className="min-w-0 max-w-full">
                             <div
                               className={`min-w-0 max-w-full overflow-hidden rounded-2xl px-4 py-3 [overflow-wrap:anywhere] ${
                                 isUser
-                                  ? "rounded-tr-sm bg-blue-600 text-white"
-                                  : "rounded-tl-sm border border-gray-200 bg-white text-gray-800 shadow-sm"
+                                  ? "rounded-tr-sm bg-accentDeepColor text-white"
+                                  : "rounded-tl-sm border border-[#ECEEF3] bg-whiteColor text-secondaryTextColor"
                               }`}
                             >
                               {chatMessage.content &&
@@ -1041,21 +1129,30 @@ export default function ChatBot() {
                                     {chatMessage.content}
                                   </p>
                                 ) : (
-                                  <MarkdownMessage content={chatMessage.content} />
+                                  <MarkdownMessage
+                                    content={chatMessage.content}
+                                  />
                                 ))}
                               {(chatMessage.structured_results ?? []).map(
                                 (result, index) =>
-                                  result.kind === "action_proposal" && result.proposal ? (
+                                  result.kind === "action_proposal" &&
+                                  result.proposal ? (
                                     <ActionProposalCard
                                       key={`${chatMessage.id}-${index}`}
                                       proposal={result.proposal}
                                       state={proposalStates[result.proposal.id]}
-                                      busy={busyProposalId === result.proposal.id}
+                                      busy={
+                                        busyProposalId === result.proposal.id
+                                      }
                                       onConfirm={() =>
-                                        handleConfirmProposal(result.proposal!.id)
+                                        handleConfirmProposal(
+                                          result.proposal!.id,
+                                        )
                                       }
                                       onCancel={() =>
-                                        handleCancelProposal(result.proposal!.id)
+                                        handleCancelProposal(
+                                          result.proposal!.id,
+                                        )
                                       }
                                     />
                                   ) : (
@@ -1068,7 +1165,7 @@ export default function ChatBot() {
                               {!isUser &&
                                 chatMessage.status === "in_progress" &&
                                 !chatMessage.content && (
-                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <div className="flex items-center gap-2 text-sm text-darkGrayColor">
                                     <Spin size="small" />
                                     <span>
                                       {activeTool
@@ -1078,13 +1175,13 @@ export default function ChatBot() {
                                   </div>
                                 )}
                               {chatMessage.error && (
-                                <p className="mt-2 text-xs text-red-600">
+                                <p className="mt-2 text-xs text-rose-600">
                                   {chatMessage.error}
                                 </p>
                               )}
                             </div>
                             <p
-                              className={`mt-1 px-2 text-xs text-gray-400 ${
+                              className={`mt-1 px-2 text-xs text-darkGrayColor ${
                                 isUser ? "text-right" : ""
                               }`}
                             >
@@ -1098,7 +1195,7 @@ export default function ChatBot() {
                 )}
               </div>
 
-              <div className="border-t border-gray-100 bg-white px-4 py-4 sm:px-6">
+              <div className="border-t border-[#ECEEF3] bg-whiteColor px-4 py-4 sm:px-6">
                 {renderedMessages.length > 0 && !isStreaming && (
                   <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
                     {quickPrompts.slice(0, 3).map((prompt) => (
@@ -1106,14 +1203,14 @@ export default function ChatBot() {
                         type="button"
                         key={prompt}
                         onClick={() => setInputValue(prompt)}
-                        className="shrink-0 rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:border-blue-300 hover:text-blue-700"
+                        className="shrink-0 rounded-full border border-[#ECEEF3] px-3 py-1.5 text-xs text-grayColor transition-colors hover:border-accentColor/40 hover:text-accentDeepColor"
                       >
                         {prompt}
                       </button>
                     ))}
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-2 rounded-xl border border-[#ECEEF3] bg-whiteColor px-3 py-2 transition-colors focus-within:border-accentColor/50">
                   <Input.TextArea
                     value={inputValue}
                     autoSize={{ minRows: 1, maxRows: 5 }}
@@ -1131,12 +1228,12 @@ export default function ChatBot() {
                         void handleSendMessage();
                       }
                     }}
-                    className="!rounded-xl"
+                    variant="borderless"
+                    className="!bg-transparent !px-0 !shadow-none"
                   />
                   {isStreaming ? (
                     <Button
                       danger
-                      size="large"
                       icon={<StopOutlined />}
                       onClick={() => abortControllerRef.current?.abort()}
                     >
@@ -1145,23 +1242,22 @@ export default function ChatBot() {
                   ) : (
                     <Button
                       type="primary"
-                      size="large"
                       icon={<SendOutlined />}
                       disabled={!inputValue.trim()}
-                      className="!bg-primaryColor"
                       onClick={() => void handleSendMessage()}
                     >
                       Send
                     </Button>
                   )}
                 </div>
-                <p className="mt-2 text-center text-[11px] text-gray-400">
-                  AI answers can be incomplete. Review proposed actions before confirming.
+                <p className="mt-2 text-center text-[11px] text-darkGrayColor">
+                  AI answers can be incomplete. Review proposed actions before
+                  confirming.
                 </p>
               </div>
             </div>
           )}
-        </Card>
+        </section>
       </div>
     </div>
   );

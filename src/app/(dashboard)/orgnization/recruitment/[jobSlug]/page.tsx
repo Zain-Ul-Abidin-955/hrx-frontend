@@ -2,17 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
-  Avatar,
   Button,
-  Card,
-  Col,
-  Descriptions,
-  Divider,
-  Empty,
   Modal,
   Popconfirm,
-  Progress,
-  Row,
   Select,
   Space,
   Table,
@@ -25,10 +17,11 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   ExportOutlined,
+  FileTextOutlined,
+  InboxOutlined,
   ReloadOutlined,
   RobotOutlined,
   TeamOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,12 +36,14 @@ import {
   updateJobApplicationStatus,
 } from "@/api/collection/jobs";
 import { LoadingSpinner } from "@/components/loader/Loading";
+import Panel from "@/components/dashboard/Panel";
+import StatTile from "@/components/dashboard/StatTile";
+import {
+  DefinitionGrid,
+  ProseSection,
+} from "@/components/dashboard/DefinitionGrid";
 import useUserStore from "@/store/userStore";
-import type {
-  Job,
-  JobApplication,
-  JobApplicationStatus,
-} from "@/types/job";
+import type { Job, JobApplication, JobApplicationStatus } from "@/types/job";
 
 type CandidateFilter = "active" | "all" | JobApplicationStatus;
 
@@ -68,11 +63,26 @@ const STATUS_LABELS: Record<JobApplicationStatus, string> = {
 
 const STATUS_COLORS: Record<JobApplicationStatus, string> = {
   submitted: "default",
-  reviewing: "orange",
-  shortlisted: "blue",
-  rejected: "red",
-  hired: "green",
+  reviewing: "processing",
+  shortlisted: "geekblue",
+  rejected: "error",
+  hired: "success",
 };
+
+/** Score bands for the AI match ring — good / fair / weak, not a series. */
+function scoreTone(score: number) {
+  if (score >= 80)
+    return { ring: "#059669", text: "text-emerald-700", bg: "bg-emerald-50" };
+  if (score >= 60)
+    return { ring: "#D97706", text: "text-amber-700", bg: "bg-amber-50" };
+  return { ring: "#DC2626", text: "text-rose-700", bg: "bg-rose-50" };
+}
+
+/** Two-letter monogram for a candidate with no avatar. */
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "?";
+}
 
 function humanize(value?: string | null) {
   if (!value) return "—";
@@ -104,12 +114,16 @@ function formatSalary(job: Job) {
 function getErrorMessage(error: unknown, fallback: string) {
   if (!isAxiosError(error)) return fallback;
   const data = error.response?.data as
-    | { message?: string; detail?: string | { msg?: string }[] }
-    | undefined;
+    { message?: string; detail?: string | { msg?: string }[] } | undefined;
   if (typeof data?.message === "string") return data.message;
   if (typeof data?.detail === "string") return data.detail;
   if (Array.isArray(data?.detail)) {
-    return data.detail.map((item) => item?.msg).filter(Boolean).join(", ") || fallback;
+    return (
+      data.detail
+        .map((item) => item?.msg)
+        .filter(Boolean)
+        .join(", ") || fallback
+    );
   }
   return fallback;
 }
@@ -162,7 +176,9 @@ export default function JobCandidatesPage() {
           application.parsed_resume?.full_name ||
           "Candidate",
         email:
-          application.candidate_email || application.parsed_resume?.email || "—",
+          application.candidate_email ||
+          application.parsed_resume?.email ||
+          "—",
       })),
     [applications],
   );
@@ -182,8 +198,9 @@ export default function JobCandidatesPage() {
       shortlisted: candidates.filter(
         (candidate) => candidate.status === "shortlisted",
       ).length,
-      rejected: candidates.filter((candidate) => candidate.status === "rejected")
-        .length,
+      rejected: candidates.filter(
+        (candidate) => candidate.status === "rejected",
+      ).length,
       screened: candidates.filter(
         (candidate) => candidate.ranking_status === "completed",
       ).length,
@@ -237,10 +254,7 @@ export default function JobCandidatesPage() {
   const { mutate: rerankCandidates, isPending: isReranking } = useMutation({
     mutationFn: () => rerankJobApplications(jobId as string),
     onSuccess: (rankedApplications) => {
-      queryClient.setQueryData(
-        ["job-applications", jobId],
-        rankedApplications,
-      );
+      queryClient.setQueryData(["job-applications", jobId], rankedApplications);
       message.success(`Rankings updated for ${job?.title ?? "this job"}`);
     },
     onError: (error) => {
@@ -253,8 +267,7 @@ export default function JobCandidatesPage() {
     isPending: isDeletingCandidate,
     variables: deletingApplicationId,
   } = useMutation({
-    mutationFn: (applicationId: string) =>
-      deleteJobApplication(applicationId),
+    mutationFn: (applicationId: string) => deleteJobApplication(applicationId),
     onSuccess: (_result, applicationId) => {
       queryClient.setQueryData<JobApplication[]>(
         ["job-applications", jobId],
@@ -278,11 +291,17 @@ export default function JobCandidatesPage() {
       dataIndex: "name",
       key: "name",
       render: (name: string, record) => (
-        <div className="flex items-center space-x-3">
-          <Avatar size={40} icon={<UserOutlined />} />
-          <div>
-            <p className="font-semibold text-gray-800">{name}</p>
-            <p className="text-xs text-gray-500">{record.email}</p>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accentColor/10 text-xs font-semibold text-accentDeepColor">
+            {initials(name)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-blackColor">
+              {name}
+            </p>
+            <p className="truncate text-xs text-darkGrayColor">
+              {record.email}
+            </p>
           </div>
         </div>
       ),
@@ -296,26 +315,29 @@ export default function JobCandidatesPage() {
       render: (score: number | null, record) => {
         if (score == null) {
           return (
-            <Tag color={record.ranking_status === "failed" ? "red" : "gold"}>
+            <Tag
+              variant="filled"
+              className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
+              color={record.ranking_status === "failed" ? "error" : "default"}
+            >
               {record.ranking_status === "failed" ? "Unavailable" : "Pending"}
             </Tag>
           );
         }
+        const tone = scoreTone(score);
         return (
-          <div className="flex items-center space-x-2">
-            <Progress
-              type="circle"
-              percent={score}
-              size={40}
-              strokeColor={
-                score >= 80
-                  ? "#10b981"
-                  : score >= 60
-                    ? "#f59e0b"
-                    : "#ef4444"
-              }
-            />
-            <span className="font-semibold text-gray-700">{score}%</span>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `conic-gradient(${tone.ring} ${score * 3.6}deg, #ECEEF3 0deg)`,
+              }}
+            >
+              <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-whiteColor" />
+            </span>
+            <span className={`text-sm font-semibold tabular-nums ${tone.text}`}>
+              {score}%
+            </span>
           </div>
         );
       },
@@ -325,27 +347,46 @@ export default function JobCandidatesPage() {
       dataIndex: "status",
       key: "status",
       render: (status: JobApplicationStatus) => (
-        <Tag color={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Tag>
+        <Tag
+          variant="filled"
+          className="!rounded-md !px-2 !py-0.5 !text-xs !font-medium"
+          color={STATUS_COLORS[status]}
+        >
+          {STATUS_LABELS[status]}
+        </Tag>
       ),
     },
     {
       title: "Applied",
       dataIndex: "created_at",
       key: "created_at",
-      render: (createdAt: string) => new Date(createdAt).toLocaleDateString(),
+      render: (createdAt: string) => (
+        <span className="text-sm text-secondaryTextColor">
+          {new Date(createdAt).toLocaleDateString()}
+        </span>
+      ),
     },
     {
-      title: "Action",
+      title: "",
       key: "action",
+      align: "right" as const,
       render: (_value, record) => {
-        const cannotShortlist = ["shortlisted", "hired"].includes(record.status);
+        const cannotShortlist = ["shortlisted", "hired"].includes(
+          record.status,
+        );
         const cannotReject = ["rejected", "hired"].includes(record.status);
         return (
-          <Space wrap>
+          <Space wrap size={8} className="justify-end">
+            <Button
+              size="small"
+              onClick={() => setResumeTarget(record)}
+              icon={<FileTextOutlined />}
+            >
+              Resume
+            </Button>
             <Button
               type="primary"
               size="small"
-              className="!bg-green-600"
               disabled={cannotShortlist}
               loading={
                 isUpdatingCandidate &&
@@ -389,9 +430,6 @@ export default function JobCandidatesPage() {
                 {record.status === "rejected" ? "Rejected" : "Reject"}
               </Button>
             </Popconfirm>
-            <Button size="small" onClick={() => setResumeTarget(record)}>
-              View Resume
-            </Button>
             <Popconfirm
               title="Delete this candidate application?"
               description="This permanently removes the application and ranking data. This action cannot be undone."
@@ -407,9 +445,8 @@ export default function JobCandidatesPage() {
                 loading={
                   isDeletingCandidate && deletingApplicationId === record.id
                 }
-              >
-                Delete
-              </Button>
+                aria-label="Delete application"
+              />
             </Popconfirm>
           </Space>
         );
@@ -423,23 +460,40 @@ export default function JobCandidatesPage() {
 
   if (!canManageRecruitment) {
     return (
-      <Card>
-        <p className="text-gray-600">
-          You do not have permission to manage recruitment.
+      <div className="hrx-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+          <InboxOutlined />
+        </span>
+        <p className="mt-1 text-sm font-medium text-blackColor">
+          You do not have access to recruitment
         </p>
-      </Card>
+        <p className="max-w-sm text-sm text-grayColor">
+          Ask an organization admin to grant you recruitment permissions.
+        </p>
+      </div>
     );
   }
 
   if (isJobError || !job) {
     return (
-      <div className="space-y-4">
-        <Link href="/orgnization/recruitment">
-          <Button icon={<ArrowLeftOutlined />}>Back to Recruitment</Button>
+      <div className="space-y-5">
+        <Link
+          href="/orgnization/recruitment"
+          className="inline-flex items-center gap-1.5 text-xs font-medium !text-grayColor hover:!text-accentDeepColor"
+        >
+          <ArrowLeftOutlined style={{ fontSize: 11 }} /> Back to recruitment
         </Link>
-        <Card>
-          <Empty description="This job could not be loaded." />
-        </Card>
+        <div className="hrx-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+            <InboxOutlined />
+          </span>
+          <p className="mt-1 text-sm font-medium text-blackColor">
+            This job could not be loaded
+          </p>
+          <p className="max-w-sm text-sm text-grayColor">
+            It may have been removed, or the link may be out of date.
+          </p>
+        </div>
       </div>
     );
   }
@@ -447,163 +501,130 @@ export default function JobCandidatesPage() {
   const filterOptions = [
     { label: `Active (${counts.active})`, value: "active" },
     { label: `All (${candidates.length})`, value: "all" },
-    { label: `Submitted (${candidates.filter((item) => item.status === "submitted").length})`, value: "submitted" },
-    { label: `Screening (${candidates.filter((item) => item.status === "reviewing").length})`, value: "reviewing" },
+    {
+      label: `Submitted (${candidates.filter((item) => item.status === "submitted").length})`,
+      value: "submitted",
+    },
+    {
+      label: `Screening (${candidates.filter((item) => item.status === "reviewing").length})`,
+      value: "reviewing",
+    },
     { label: `Shortlisted (${counts.shortlisted})`, value: "shortlisted" },
     { label: `Rejected (${counts.rejected})`, value: "rejected" },
-    { label: `Hired (${candidates.filter((item) => item.status === "hired").length})`, value: "hired" },
+    {
+      label: `Hired (${candidates.filter((item) => item.status === "hired").length})`,
+      value: "hired",
+    },
   ];
 
+  const screenPercent = candidates.length
+    ? Math.round((counts.screened / candidates.length) * 100)
+    : 0;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/orgnization/recruitment">
-          <Button type="link" className="!px-0" icon={<ArrowLeftOutlined />}>
-            Back to Recruitment
-          </Button>
+    <div className="space-y-5">
+      {/* ---------- Page header ---------- */}
+      <header>
+        <Link
+          href="/orgnization/recruitment"
+          className="inline-flex items-center gap-1.5 text-xs font-medium !text-grayColor transition-colors hover:!text-accentDeepColor"
+        >
+          <ArrowLeftOutlined style={{ fontSize: 11 }} /> Back to recruitment
         </Link>
-        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-800">{job.title}</h1>
-              <Tag color={job.is_active ? "green" : "default"}>
-                {job.is_active ? "Active" : "Inactive"}
+
+        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+                {job.title}
+              </h1>
+              <Tag
+                variant="filled"
+                className="!m-0 !rounded-md !px-2 !py-0.5 !text-xs !font-medium"
+                color={job.is_active ? "success" : "default"}
+              >
+                {job.is_active ? "Live" : "Inactive"}
               </Tag>
             </div>
-            <p className="mt-1 text-gray-600">
-              Candidates and rankings for this position only
+            <p className="mt-1 text-sm text-grayColor">
+              {[
+                job.department,
+                humanize(job.employment_type),
+                humanize(job.workplace_type),
+                job.location,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           </div>
+
           <Button
             icon={<ExportOutlined />}
+            className="shrink-0"
             href={`/jobs/${user.organization?.slug}/${job.slug}`}
             target="_blank"
             disabled={!user.organization?.slug || !job.is_active}
           >
-            View Public Job
+            View public page
           </Button>
         </div>
+      </header>
+
+      {/* ---------- Stat tiles ---------- */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Active candidates"
+          value={counts.active}
+          icon={<TeamOutlined />}
+          caption={`${candidates.length} total applications`}
+        />
+        <StatTile
+          label="AI screened"
+          value={counts.screened}
+          icon={<RobotOutlined />}
+          meter={screenPercent}
+          caption={`${screenPercent}% of applications`}
+        />
+        <StatTile
+          label="Shortlisted"
+          value={counts.shortlisted}
+          icon={<CheckCircleOutlined />}
+          caption="moved forward"
+        />
+        <StatTile
+          label="Rejected"
+          value={counts.rejected}
+          icon={<CloseCircleOutlined />}
+          caption="kept on file"
+        />
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Active Candidates</p>
-                <p className="text-3xl font-bold text-gray-800">{counts.active}</p>
-              </div>
-              <TeamOutlined className="text-3xl text-blue-600" />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">AI Screened</p>
-                <p className="text-3xl font-bold text-gray-800">{counts.screened}</p>
-              </div>
-              <RobotOutlined className="text-3xl text-purple-600" />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Shortlisted</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {counts.shortlisted}
-                </p>
-              </div>
-              <CheckCircleOutlined className="text-3xl text-green-600" />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Rejected</p>
-                <p className="text-3xl font-bold text-gray-800">{counts.rejected}</p>
-              </div>
-              <CloseCircleOutlined className="text-3xl text-red-500" />
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Job Description">
-        <Descriptions bordered size="small" column={{ xs: 1, sm: 2, lg: 3 }}>
-          <Descriptions.Item label="Department">
-            {job.department || "—"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Location">
-            {job.location || "—"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Employment">
-            {humanize(job.employment_type)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Workplace">
-            {humanize(job.workplace_type)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Experience">
-            {job.experience_level || "—"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Salary">{formatSalary(job)}</Descriptions.Item>
-        </Descriptions>
-        <Divider titlePlacement="start">Description</Divider>
-        <p className="whitespace-pre-wrap text-gray-700">{job.description}</p>
-        {job.requirements && (
-          <>
-            <Divider titlePlacement="start">Requirements</Divider>
-            <p className="whitespace-pre-wrap text-gray-700">
-              {job.requirements}
-            </p>
-          </>
-        )}
-        {job.responsibilities && (
-          <>
-            <Divider titlePlacement="start">Responsibilities</Divider>
-            <p className="whitespace-pre-wrap text-gray-700">
-              {job.responsibilities}
-            </p>
-          </>
-        )}
-        {job.benefits && (
-          <>
-            <Divider titlePlacement="start">Benefits</Divider>
-            <p className="whitespace-pre-wrap text-gray-700">{job.benefits}</p>
-          </>
-        )}
-      </Card>
-
-      <Card
+      {/* ---------- Candidates ---------- */}
+      <Panel
+        flush
         title="Candidates"
-        extra={
-          <Space wrap>
+        icon={<TeamOutlined />}
+        action={
+          <Space wrap size={8}>
             <Select<CandidateFilter>
               value={filter}
               onChange={setFilter}
               options={filterOptions}
+              size="small"
               className="min-w-44"
             />
             <Button
+              size="small"
               icon={<ReloadOutlined />}
               loading={isReranking}
               disabled={candidates.length === 0}
               onClick={() => rerankCandidates()}
             >
-              Re-evaluate Rankings
+              Re-evaluate
             </Button>
           </Space>
         }
       >
-        <p className="mb-4 text-sm text-gray-500">
-          Use the filter to review every workflow state. Rejected applications are
-          retained unless you explicitly delete them.
-        </p>
         <Table<CandidateRow>
           columns={candidateColumns}
           dataSource={visibleCandidates}
@@ -611,17 +632,77 @@ export default function JobCandidatesPage() {
           pagination={{ pageSize: 10, hideOnSinglePage: true }}
           scroll={{ x: 900 }}
           locale={{
-            emptyText: isApplicationsError
-              ? "Failed to load candidates. Please try again."
-              : filter === "rejected"
-                ? "No rejected applications"
-                : "No candidates in this view",
+            emptyText: (
+              <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+                  <InboxOutlined />
+                </span>
+                <p className="mt-1 text-sm font-medium text-blackColor">
+                  {isApplicationsError
+                    ? "Could not load candidates"
+                    : filter === "rejected"
+                      ? "No rejected applications"
+                      : "No candidates in this view"}
+                </p>
+                <p className="max-w-sm text-sm text-grayColor">
+                  {isApplicationsError
+                    ? "Something went wrong fetching applications. Try again in a moment."
+                    : "Rejected applications are kept on file until you delete them — switch the filter to see every state."}
+                </p>
+              </div>
+            ),
           }}
         />
-      </Card>
+      </Panel>
+
+      {/* ---------- The role itself ---------- */}
+      <Panel title="Job description" icon={<FileTextOutlined />}>
+        <DefinitionGrid
+          items={[
+            ["Department", job.department || "—"],
+            ["Location", job.location || "—"],
+            ["Employment", humanize(job.employment_type)],
+            ["Workplace", humanize(job.workplace_type)],
+            ["Experience", job.experience_level || "—"],
+            ["Salary", formatSalary(job)],
+          ]}
+        />
+        {(
+          [
+            ["Description", job.description],
+            ["Requirements", job.requirements],
+            ["Responsibilities", job.responsibilities],
+            ["Benefits", job.benefits],
+          ] as const
+        ).map(([heading, body]) =>
+          body ? (
+            <ProseSection key={heading} heading={heading}>
+              {body}
+            </ProseSection>
+          ) : null,
+        )}
+      </Panel>
 
       <Modal
-        title={resumeTarget ? `${resumeTarget.name} — Resume` : "Candidate Resume"}
+        title={
+          resumeTarget ? (
+            <div className="flex min-w-0 items-center gap-3 pr-8">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accentColor/10 text-xs font-semibold text-accentDeepColor">
+                {initials(resumeTarget.name)}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-blackColor">
+                  {resumeTarget.name}
+                </p>
+                <p className="truncate text-xs font-normal text-grayColor">
+                  {resumeTarget.email}
+                </p>
+              </div>
+            </div>
+          ) : (
+            "Candidate resume"
+          )
+        }
         open={resumeTarget != null}
         onCancel={() => setResumeTarget(null)}
         footer={<Button onClick={() => setResumeTarget(null)}>Close</Button>}
@@ -629,118 +710,184 @@ export default function JobCandidatesPage() {
         centered
       >
         {resumeTarget && (
-          <div className="max-h-[70vh] overflow-y-auto pr-2 pt-3">
-            <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-              <Descriptions.Item label="Email">{resumeTarget.email}</Descriptions.Item>
-              <Descriptions.Item label="Phone">
-                {resumeTarget.candidate_phone ||
-                  resumeTarget.parsed_resume?.phone ||
-                  "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Location">
-                {resumeTarget.candidate_location ||
-                  resumeTarget.parsed_resume?.location ||
-                  "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Experience">
-                {resumeTarget.parsed_resume?.total_experience_years != null
-                  ? `${resumeTarget.parsed_resume.total_experience_years} years`
-                  : "—"}
-              </Descriptions.Item>
-              <Descriptions.Item label="AI recommendation">
-                {humanize(resumeTarget.ranking_recommendation)}
-              </Descriptions.Item>
-              <Descriptions.Item label="AI score">
-                {resumeTarget.ranking_score == null
-                  ? "Pending"
-                  : `${resumeTarget.ranking_score}%`}
-              </Descriptions.Item>
-            </Descriptions>
+          <div className="max-h-[70vh] overflow-y-auto pr-2 pt-2">
+            {/* Score first — it is why this dialog gets opened. */}
+            {resumeTarget.ranking_score != null && (
+              <div
+                className={`mb-4 flex items-center gap-3 rounded-xl px-4 py-3 ${scoreTone(resumeTarget.ranking_score).bg}`}
+              >
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    background: `conic-gradient(${scoreTone(resumeTarget.ranking_score).ring} ${resumeTarget.ranking_score * 3.6}deg, #ffffff 0deg)`,
+                  }}
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full bg-whiteColor text-[11px] font-semibold tabular-nums ${scoreTone(resumeTarget.ranking_score).text}`}
+                  >
+                    {resumeTarget.ranking_score}
+                  </span>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-darkGrayColor">
+                    AI match
+                  </p>
+                  <p
+                    className={`text-sm font-medium ${scoreTone(resumeTarget.ranking_score).text}`}
+                  >
+                    {humanize(resumeTarget.ranking_recommendation)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DefinitionGrid
+              items={[
+                [
+                  "Phone",
+                  resumeTarget.candidate_phone ||
+                    resumeTarget.parsed_resume?.phone ||
+                    "—",
+                ],
+                [
+                  "Location",
+                  resumeTarget.candidate_location ||
+                    resumeTarget.parsed_resume?.location ||
+                    "—",
+                ],
+                [
+                  "Experience",
+                  resumeTarget.parsed_resume?.total_experience_years != null
+                    ? `${resumeTarget.parsed_resume.total_experience_years} years`
+                    : "—",
+                ],
+                ["Status", STATUS_LABELS[resumeTarget.status]],
+                [
+                  "Applied",
+                  new Date(resumeTarget.created_at).toLocaleDateString(),
+                ],
+                [
+                  "AI score",
+                  resumeTarget.ranking_score == null
+                    ? "Pending"
+                    : `${resumeTarget.ranking_score}%`,
+                ],
+              ]}
+            />
 
             {(resumeTarget.summary || resumeTarget.parsed_resume?.summary) && (
-              <>
-                <Divider titlePlacement="start">Summary</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.summary || resumeTarget.parsed_resume?.summary}
-                </p>
-              </>
+              <ProseSection heading="Summary">
+                {resumeTarget.summary || resumeTarget.parsed_resume?.summary}
+              </ProseSection>
             )}
 
-            <Divider titlePlacement="start">Skills</Divider>
-            {resumeTarget.parsed_resume?.skills.length ? (
-              <Space size={[4, 8]} wrap>
-                {resumeTarget.parsed_resume.skills.map((skill) => (
-                  <Tag color="blue" key={skill}>
-                    {skill}
-                  </Tag>
-                ))}
-              </Space>
-            ) : (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="No skills extracted"
-              />
-            )}
-
-            {resumeTarget.parsed_resume?.work_experience.map(
-              (experience, index) => (
-                <div key={`${experience.company}-${experience.title}-${index}`}>
-                  {index === 0 && (
-                    <Divider titlePlacement="start">Work Experience</Divider>
-                  )}
-                  <p className="font-semibold text-gray-800">
-                    {[experience.title, experience.company]
-                      .filter(Boolean)
-                      .join(" at ") || "Experience"}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {[experience.start_date, experience.end_date]
-                      .filter(Boolean)
-                      .join(" – ")}
-                  </p>
-                  {experience.description && (
-                    <p className="mb-3 mt-1 whitespace-pre-wrap text-gray-700">
-                      {experience.description}
-                    </p>
-                  )}
+            <ProseSection heading="Skills">
+              {resumeTarget.parsed_resume?.skills.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {resumeTarget.parsed_resume.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-md bg-accentColor/10 px-2 py-0.5 text-xs font-medium text-accentDeepColor"
+                    >
+                      {skill}
+                    </span>
+                  ))}
                 </div>
-              ),
+              ) : (
+                <span className="text-sm text-darkGrayColor">
+                  No skills extracted
+                </span>
+              )}
+            </ProseSection>
+
+            {!!resumeTarget.parsed_resume?.work_experience.length && (
+              <ProseSection heading="Work experience">
+                <ol className="relative space-y-4 border-l border-[#ECEEF3] pl-4">
+                  {resumeTarget.parsed_resume.work_experience.map(
+                    (experience, index) => (
+                      <li
+                        key={`${experience.company}-${experience.title}-${index}`}
+                        className="relative"
+                      >
+                        <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-accentDeepColor" />
+                        <p className="text-sm font-medium text-blackColor">
+                          {[experience.title, experience.company]
+                            .filter(Boolean)
+                            .join(" at ") || "Experience"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-darkGrayColor">
+                          {[experience.start_date, experience.end_date]
+                            .filter(Boolean)
+                            .join(" – ") || "Dates not listed"}
+                        </p>
+                        {experience.description && (
+                          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-secondaryTextColor">
+                            {experience.description}
+                          </p>
+                        )}
+                      </li>
+                    ),
+                  )}
+                </ol>
+              </ProseSection>
             )}
 
             {resumeTarget.ranking_rationale && (
-              <>
-                <Divider titlePlacement="start">AI Assessment</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.ranking_rationale}
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="mb-2 font-semibold text-green-700">Strengths</p>
-                    {(resumeTarget.ranking_strengths ?? []).map((strength) => (
-                      <p className="mb-1 text-sm text-gray-700" key={strength}>
-                        • {strength}
-                      </p>
-                    ))}
+              <ProseSection heading="AI assessment">
+                {resumeTarget.ranking_rationale}
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#ECEEF3] p-3.5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                      Strengths
+                    </p>
+                    {(resumeTarget.ranking_strengths ?? []).length ? (
+                      <ul className="space-y-1.5">
+                        {(resumeTarget.ranking_strengths ?? []).map((item) => (
+                          <li
+                            key={item}
+                            className="flex gap-2 text-sm text-secondaryTextColor"
+                          >
+                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-600" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-sm text-darkGrayColor">
+                        None listed
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <p className="mb-2 font-semibold text-orange-700">Gaps</p>
-                    {(resumeTarget.ranking_gaps ?? []).map((gap) => (
-                      <p className="mb-1 text-sm text-gray-700" key={gap}>
-                        • {gap}
-                      </p>
-                    ))}
+                  <div className="rounded-xl border border-[#ECEEF3] p-3.5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                      Gaps
+                    </p>
+                    {(resumeTarget.ranking_gaps ?? []).length ? (
+                      <ul className="space-y-1.5">
+                        {(resumeTarget.ranking_gaps ?? []).map((item) => (
+                          <li
+                            key={item}
+                            className="flex gap-2 text-sm text-secondaryTextColor"
+                          >
+                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-600" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-sm text-darkGrayColor">
+                        None listed
+                      </span>
+                    )}
                   </div>
                 </div>
-              </>
+              </ProseSection>
             )}
 
             {resumeTarget.cover_letter && (
-              <>
-                <Divider titlePlacement="start">Cover Letter</Divider>
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {resumeTarget.cover_letter}
-                </p>
-              </>
+              <ProseSection heading="Cover letter">
+                {resumeTarget.cover_letter}
+              </ProseSection>
             )}
           </div>
         )}
