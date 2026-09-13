@@ -23,6 +23,14 @@ const LandingHeader: React.FC = () => {
 
           <div className="flex items-center space-x-4">
             <Button
+              type="text"
+              size="large"
+              onClick={() => router.push("/jobs")}
+              className="!text-primaryColor"
+            >
+              Browse Jobs
+            </Button>
+            <Button
               type="default"
               size="large"
               onClick={() => router.push("/login")}
@@ -34,9 +42,12 @@ const LandingHeader: React.FC = () => {
               type="primary"
               size="large"
               onClick={() => {
-                document
-                  .getElementById("landing-signup")
-                  ?.scrollIntoView({ behavior: "smooth" });
+                const signup = document.getElementById("landing-signup");
+                if (signup) {
+                  signup.scrollIntoView({ behavior: "smooth" });
+                } else {
+                  router.push("/#landing-signup");
+                }
               }}
               className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90"
             >
