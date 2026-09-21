@@ -3,9 +3,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Form, Modal, message } from "antd";
 import {
+  BankOutlined,
+  CalendarOutlined,
   DeleteOutlined,
   EditOutlined,
   GlobalOutlined,
+  InboxOutlined,
   MailOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
@@ -26,6 +29,8 @@ import type {
   OrganizationRow,
   UpdateOrganizationPayload,
 } from "@/types/organization";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
+import { FormSection } from "@/components/dashboard/DefinitionGrid";
 
 function isValidUrl(value: string) {
   return /^https?:\/\//i.test(value);
@@ -46,6 +51,12 @@ function getErrorMessage(error: unknown, fallback: string) {
   return isAxiosError(error)
     ? (error.response?.data as { message?: string })?.message || fallback
     : fallback;
+}
+
+function isThisMonth(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
 const OrganizationListsPage: React.FC = () => {
@@ -121,6 +132,27 @@ const OrganizationListsPage: React.FC = () => {
     [data],
   );
 
+  const stats: StatTileProps[] = [
+    {
+      label: "Organizations",
+      value: tableData.length,
+      icon: <BankOutlined />,
+      caption: "registered on the platform",
+    },
+    {
+      label: "With websites",
+      value: tableData.filter((organization) => Boolean(organization.website)).length,
+      icon: <GlobalOutlined />,
+      caption: "public websites provided",
+    },
+    {
+      label: "Joined this month",
+      value: tableData.filter((organization) => isThisMonth(organization.created_at)).length,
+      icon: <CalendarOutlined />,
+      caption: "new organizations",
+    },
+  ];
+
   const columns: ColumnsType<OrganizationRow> = useMemo(
     () => [
       {
@@ -128,7 +160,7 @@ const OrganizationListsPage: React.FC = () => {
         dataIndex: "name",
         key: "name",
         render: (name: string) => (
-          <span className="font-semibold text-gray-800">{name}</span>
+          <span className="font-semibold text-blackColor">{name}</span>
         ),
       },
       {
@@ -136,8 +168,8 @@ const OrganizationListsPage: React.FC = () => {
         dataIndex: "email",
         key: "email",
         render: (email: string) => (
-          <div className="flex items-center gap-2 text-gray-600">
-            <MailOutlined className="text-gray-400" />
+          <div className="flex items-center gap-2 text-secondaryTextColor">
+            <MailOutlined className="text-darkGrayColor" />
             <span className="text-sm">{email}</span>
           </div>
         ),
@@ -147,7 +179,7 @@ const OrganizationListsPage: React.FC = () => {
         dataIndex: "description",
         key: "description",
         render: (description: string) => (
-          <span className="text-gray-600">{description || "—"}</span>
+          <span className="text-secondaryTextColor">{description || "—"}</span>
         ),
       },
       {
@@ -163,7 +195,7 @@ const OrganizationListsPage: React.FC = () => {
                 href={website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-primaryColor hover:underline text-sm"
+                className="flex items-center gap-2 text-sm text-accentDeepColor hover:underline"
               >
                 <GlobalOutlined />
                 {website}
@@ -172,8 +204,8 @@ const OrganizationListsPage: React.FC = () => {
           }
 
           return (
-            <span className="flex items-center gap-2 text-gray-600 text-sm">
-              <GlobalOutlined className="text-gray-400" />
+            <span className="flex items-center gap-2 text-sm text-secondaryTextColor">
+              <GlobalOutlined className="text-darkGrayColor" />
               {website}
             </span>
           );
@@ -184,7 +216,7 @@ const OrganizationListsPage: React.FC = () => {
         dataIndex: "created_at",
         key: "created_at",
         render: (createdAt: string) => (
-          <span className="text-gray-600 text-sm">{formatDate(createdAt)}</span>
+          <span className="text-sm text-secondaryTextColor">{formatDate(createdAt)}</span>
         ),
       },
       {
@@ -192,12 +224,13 @@ const OrganizationListsPage: React.FC = () => {
         key: "action",
         width: 130,
         render: (_value, record) => (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               type="text"
               icon={<EditOutlined />}
               aria-label={`Edit ${record.name}`}
-              className="w-12! h-12! rounded-xl! bg-gray-50! text-slate-600! hover:bg-gray-100!"
+              size="small"
+              className="text-grayColor!"
               onClick={() => {
                 form.resetFields();
                 setEditingId(record.id);
@@ -208,7 +241,7 @@ const OrganizationListsPage: React.FC = () => {
               danger
               icon={<DeleteOutlined />}
               aria-label={`Delete ${record.name}`}
-              className="w-12! h-12! rounded-xl! bg-red-50! hover:bg-red-100!"
+              size="small"
               onClick={() => setDeleteTarget(record)}
             />
           </div>
@@ -218,27 +251,37 @@ const OrganizationListsPage: React.FC = () => {
     [form],
   );
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Organizations
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        View and maintain every organization registered on the platform.
+      </p>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Organizations</h1>
-          <p className="text-gray-600 mt-1">View all registered organizations</p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800">Organizations</h1>
-        <p className="text-gray-600 mt-1">View all registered organizations</p>
+    <div className="space-y-5">
+      {pageHeading}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {stats.map((stat) => <StatTile key={stat.label} {...stat} />)}
       </div>
 
       <MyTable<OrganizationRow>
         title="All Organizations"
+        variant="dashboard"
         searchPlaceholder="Search organizations..."
         columns={columns}
         dataSource={tableData}
@@ -247,14 +290,23 @@ const OrganizationListsPage: React.FC = () => {
         paginationConfig={{ pageSize: 5 }}
         scroll={{ x: 1200 }}
         locale={{
-          emptyText: isError
-            ? "Failed to load organizations. Please try again."
-            : "No organizations found",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor"><InboxOutlined /></span>
+              <p className="text-sm font-medium text-blackColor">{isError ? "Could not load organizations" : "No organizations found"}</p>
+              <p className="text-xs text-grayColor">{isError ? "Try again in a moment." : "Approved organizations will appear here."}</p>
+            </div>
+          ),
         }}
       />
 
       <Modal
-        title="Edit Organization"
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">Edit organization</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">Update the organization&apos;s public information and contact details.</p>
+          </div>
+        }
         open={editingId != null}
         onCancel={() => {
           if (isUpdating) return;
@@ -262,14 +314,13 @@ const OrganizationListsPage: React.FC = () => {
           form.resetFields();
         }}
         onOk={() => form.submit()}
-        okText="Save Changes"
+        okText="Save changes"
         cancelText="Cancel"
         confirmLoading={isUpdating}
         okButtonProps={{
           icon: <SaveOutlined />,
-          className:
-            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
         }}
+        width={680}
         centered
         destroyOnHidden
       >
@@ -290,35 +341,16 @@ const OrganizationListsPage: React.FC = () => {
               onFinish={(values) => saveOrganization(values)}
               className="pt-4"
             >
-              <CustomInput
-                name="name"
-                label="Organization Name"
-                placeholder="Enter organization name"
-              />
-              <CustomInput
-                name="email"
-                label="Email"
-                disabled={true}
-                type="email"
-                placeholder="Enter organization email"
-                icon={<MailOutlined />}
-              />
-              <CustomInput
-                name="description"
-                label="Description"
-                type="textarea"
-                placeholder="Enter organization description"
-                required={false}
-                rows={3}
-              />
-              <CustomInput
-                name="website"
-                label="Website"
-                type="url"
-                placeholder="https://example.com"
-                icon={<GlobalOutlined />}
-                required={false}
-              />
+              <FormSection title="Organization details">
+                <div className="grid gap-x-4 md:grid-cols-2">
+                  <CustomInput name="name" label="Organization Name" placeholder="Enter organization name" />
+                  <CustomInput name="email" label="Email" disabled={true} type="email" placeholder="Enter organization email" icon={<MailOutlined />} />
+                </div>
+                <CustomInput name="website" label="Website" type="url" placeholder="https://example.com" icon={<GlobalOutlined />} required={false} />
+              </FormSection>
+              <FormSection title="About" className="mt-5">
+                <CustomInput name="description" label="Description" type="textarea" placeholder="Enter organization description" required={false} rows={4} />
+              </FormSection>
             </Form>
           </>
         )}

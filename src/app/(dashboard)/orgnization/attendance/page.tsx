@@ -3,13 +3,10 @@
 import React, { useMemo, useState } from "react";
 import {
   Button,
-  Card,
-  Col,
   DatePicker,
   Form,
   Input,
   Modal,
-  Row,
   Tag,
   message,
 } from "antd";
@@ -18,6 +15,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  InboxOutlined,
   LoginOutlined,
   LogoutOutlined,
   SaveOutlined,
@@ -28,6 +26,7 @@ import { isAxiosError } from "axios";
 import dayjs, { type Dayjs } from "dayjs";
 import MyTable from "@/components/table/MyTable";
 import { LoadingSpinner } from "@/components/loader/Loading";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 import {
   checkInAttendance,
   checkOutAttendance,
@@ -114,32 +113,33 @@ const OrganizationAttendancePage: React.FC = () => {
     const checkedIn = roster.filter((item) => item.status === "checked_in").length;
     const absent = roster.filter((item) => item.status === "absent").length;
     const onLeave = roster.filter((item) => item.status === "on_leave").length;
-    return [
+    const tiles: StatTileProps[] = [
       {
-        title: "Present",
-        value: String(present),
-        icon: <CheckCircleOutlined className="text-3xl text-green-600" />,
-        bgColor: "bg-green-50",
+        label: "Present",
+        value: present,
+        icon: <CheckCircleOutlined />,
+        caption: "completed shifts",
       },
       {
-        title: "Checked In",
-        value: String(checkedIn),
-        icon: <ClockCircleOutlined className="text-3xl text-blue-600" />,
-        bgColor: "bg-blue-50",
+        label: "Checked in",
+        value: checkedIn,
+        icon: <ClockCircleOutlined />,
+        caption: "currently working",
       },
       {
-        title: "Absent",
-        value: String(absent),
-        icon: <CloseCircleOutlined className="text-3xl text-red-600" />,
-        bgColor: "bg-red-50",
+        label: "Absent",
+        value: absent,
+        icon: <CloseCircleOutlined />,
+        caption: "not checked in",
       },
       {
-        title: "On Leave",
-        value: String(onLeave),
-        icon: <CalendarOutlined className="text-3xl text-purple-600" />,
-        bgColor: "bg-purple-50",
+        label: "On leave",
+        value: onLeave,
+        icon: <CalendarOutlined />,
+        caption: "approved time off",
       },
     ];
+    return tiles;
   }, [roster]);
 
   const { mutate: doCheckIn, isPending: isCheckingIn } = useMutation({
@@ -209,12 +209,12 @@ const OrganizationAttendancePage: React.FC = () => {
         key: "employee",
         render: (_value, record) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primaryColor text-white font-semibold shrink-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-sm font-semibold text-accentDeepColor">
               {getNameInitial(record.employeeName)}
             </div>
             <div>
-              <p className="font-semibold text-gray-800">{record.employeeName}</p>
-              <p className="text-xs text-gray-500">{record.employee.designation}</p>
+              <p className="text-sm font-medium text-blackColor">{record.employeeName}</p>
+              <p className="text-xs text-darkGrayColor">{record.employee.designation}</p>
             </div>
           </div>
         ),
@@ -225,7 +225,7 @@ const OrganizationAttendancePage: React.FC = () => {
         key: "checkInLabel",
         render: (time: string) =>
           time === "—" ? <Tag color="red">Missing</Tag> : (
-            <span className="text-gray-700 font-medium">{time}</span>
+            <span className="font-medium text-secondaryTextColor">{time}</span>
           ),
       },
       {
@@ -234,7 +234,7 @@ const OrganizationAttendancePage: React.FC = () => {
         key: "checkOutLabel",
         render: (time: string) =>
           time === "—" ? <Tag color="red">Missing</Tag> : (
-            <span className="text-gray-700 font-medium">{time}</span>
+            <span className="font-medium text-secondaryTextColor">{time}</span>
           ),
       },
       {
@@ -242,7 +242,7 @@ const OrganizationAttendancePage: React.FC = () => {
         dataIndex: "workingHours",
         key: "workingHours",
         render: (hours: string) => (
-          <span className="font-semibold text-gray-800">{hours}</span>
+          <span className="font-semibold tabular-nums text-blackColor">{hours}</span>
         ),
       },
       {
@@ -272,8 +272,7 @@ const OrganizationAttendancePage: React.FC = () => {
 
           return (
             <Button
-              type="link"
-              className="!text-primaryColor !px-0"
+              size="small"
               onClick={() => {
                 completeForm.resetFields();
                 setCompleteTarget(record);
@@ -288,53 +287,49 @@ const OrganizationAttendancePage: React.FC = () => {
     [completeForm],
   );
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Attendance
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Track the daily roster, working hours, and missing checkouts.
+      </p>
+    </div>
+  );
+
   if (!canManageRoster) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Attendance Management
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Track and manage employee attendance
+      <div className="space-y-5">
+        {pageHeading}
+        <div className="hrx-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+            <InboxOutlined />
+          </span>
+          <p className="mt-1 text-sm font-medium text-blackColor">
+            You do not have access to attendance
+          </p>
+          <p className="max-w-sm text-sm text-grayColor">
+            Ask an organization admin to grant you attendance permissions.
           </p>
         </div>
-        <Card>
-          <p className="text-gray-600">
-            You do not have permission to view the attendance roster.
-          </p>
-        </Card>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Attendance Management
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Track and manage employee attendance
-          </p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Attendance Management
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Track and manage employee attendance
-          </p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {pageHeading}
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <DatePicker
             value={selectedDate}
@@ -352,8 +347,6 @@ const OrganizationAttendancePage: React.FC = () => {
               <Button
                 type="primary"
                 icon={<LoginOutlined />}
-                size="large"
-                className="!bg-primaryColor"
                 loading={isCheckingIn}
                 disabled={!canCheckIn || isCheckingOut}
                 onClick={() => doCheckIn()}
@@ -362,7 +355,6 @@ const OrganizationAttendancePage: React.FC = () => {
               </Button>
               <Button
                 icon={<LogoutOutlined />}
-                size="large"
                 loading={isCheckingOut}
                 disabled={!canCheckOut || isCheckingIn}
                 onClick={() => doCheckOut()}
@@ -372,26 +364,17 @@ const OrganizationAttendancePage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      <Row gutter={[16, 16]}>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <Col xs={24} sm={12} lg={6} key={stat.title}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
-                </div>
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>{stat.icon}</div>
-              </div>
-            </Card>
-          </Col>
+          <StatTile key={stat.label} {...stat} />
         ))}
-      </Row>
+      </div>
 
       <MyTable<AttendanceRosterRow>
         title="Daily Attendance Roster"
+        variant="dashboard"
         searchPlaceholder="Search employees..."
         columns={columns}
         dataSource={tableData}
@@ -405,14 +388,33 @@ const OrganizationAttendancePage: React.FC = () => {
         paginationConfig={{ pageSize: 8 }}
         scroll={{ x: 1000 }}
         locale={{
-          emptyText: isError
-            ? getErrorMessage(error, "Failed to load attendance roster.")
-            : "No attendance records found for this date",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor">
+                <InboxOutlined />
+              </span>
+              <p className="text-sm font-medium text-blackColor">
+                {isError ? "Could not load attendance" : "No attendance records"}
+              </p>
+              <p className="text-xs text-grayColor">
+                {isError
+                  ? getErrorMessage(error, "Try again in a moment.")
+                  : "There are no roster entries for this date."}
+              </p>
+            </div>
+          ),
         }}
       />
 
       <Modal
-        title="Complete Checkout"
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">Complete checkout</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              Close an open attendance entry and document the adjustment.
+            </p>
+          </div>
+        }
         open={completeTarget != null}
         onCancel={() => {
           if (isCompleting) return;
@@ -425,19 +427,17 @@ const OrganizationAttendancePage: React.FC = () => {
         confirmLoading={isCompleting}
         okButtonProps={{
           icon: <SaveOutlined />,
-          className:
-            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
         }}
+        width={560}
         centered
         destroyOnHidden
       >
-        <p className="text-gray-600 mb-4">
-          Complete checkout for{" "}
-          <span className="font-semibold text-gray-800">
-            {completeTarget?.employeeName}
-          </span>
-          . A reason is required.
-        </p>
+        <div className="mb-5 rounded-xl border border-[#ECEEF3] bg-[#F7F8FB] px-4 py-3">
+          <p className="text-sm font-medium text-blackColor">{completeTarget?.employeeName}</p>
+          <p className="mt-1 text-xs text-grayColor">
+            This will complete the selected employee&apos;s open attendance entry.
+          </p>
+        </div>
         <Form
           form={completeForm}
           layout="vertical"

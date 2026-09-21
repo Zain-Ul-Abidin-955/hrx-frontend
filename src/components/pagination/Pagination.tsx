@@ -47,23 +47,25 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
     <div className="mt-6 flex justify-end">
       <div className="flex items-center gap-3">
         <Button
+          type="primary"
           icon={<LeftOutlined />}
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
-          className="!h-9 w-[100px] !rounded-[15px] !bg-primaryColor !text-whiteColor text-h6 disabled:!opacity-50"
+          className="w-[100px]"
         >
           Previous
         </Button>
 
-        <span className="text-sm text-gray-600">
+        <span className="text-xs text-darkGrayColor">
           Page {currentPage}
           {totalPages ? ` of ${totalPages}` : ""}
         </span>
 
         <Button
+          type="primary"
           disabled={isNextDisabled}
           onClick={() => onPageChange(currentPage + 1)}
-          className="!h-9 w-[100px] !rounded-[15px] !bg-primaryColor !text-whiteColor text-h6 disabled:!opacity-50 flex items-center justify-center gap-2"
+          className="w-[100px]"
         >
           Next <RightOutlined />
         </Button>

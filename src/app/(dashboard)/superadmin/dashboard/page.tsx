@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Card, Col, Row, Select, Tag, message } from "antd";
+import { Select, Tag, message } from "antd";
 import {
   MailOutlined,
   GlobalOutlined,
   CheckOutlined,
+  CheckCircleOutlined,
   CloseOutlined,
+  ClockCircleOutlined,
   FileTextOutlined,
   BankOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +26,7 @@ import {
   rejectOrganizationApplication,
 } from "@/api/collection/organizations";
 import type { OrganizationApplicationRow } from "@/types/organization";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 
 type PendingAction = "approved" | "rejected";
 
@@ -163,6 +167,12 @@ const OrganizationPage: React.FC = () => {
 
   const applicationsCount = applications?.length ?? 0;
   const organizationsCount = organizations?.length ?? 0;
+  const pendingCount = applications?.filter(
+    (application) => application.status.toLowerCase() === "pending",
+  ).length ?? 0;
+  const approvedCount = applications?.filter(
+    (application) => application.status.toLowerCase() === "approved",
+  ).length ?? 0;
 
   const tableData = useMemo<OrganizationApplicationRow[]>(
     () =>
@@ -180,7 +190,7 @@ const OrganizationPage: React.FC = () => {
         dataIndex: "org_name",
         key: "org_name",
         render: (orgName: string) => (
-          <span className="font-semibold text-gray-800">{orgName}</span>
+          <span className="font-semibold text-blackColor">{orgName}</span>
         ),
       },
       {
@@ -188,8 +198,8 @@ const OrganizationPage: React.FC = () => {
         dataIndex: "email",
         key: "email",
         render: (email: string) => (
-          <div className="flex items-center gap-2 text-gray-600">
-            <MailOutlined className="text-gray-400" />
+          <div className="flex items-center gap-2 text-secondaryTextColor">
+            <MailOutlined className="text-darkGrayColor" />
             <span className="text-sm">{email}</span>
           </div>
         ),
@@ -207,7 +217,7 @@ const OrganizationPage: React.FC = () => {
         dataIndex: "description",
         key: "description",
         render: (description: string) => (
-          <span className="text-gray-600">{description || "—"}</span>
+          <span className="text-secondaryTextColor">{description || "—"}</span>
         ),
       },
       {
@@ -223,7 +233,7 @@ const OrganizationPage: React.FC = () => {
                 href={website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-primaryColor hover:underline text-sm"
+                className="flex items-center gap-2 text-sm text-accentDeepColor hover:underline"
               >
                 <GlobalOutlined />
                 {website}
@@ -232,8 +242,8 @@ const OrganizationPage: React.FC = () => {
           }
 
           return (
-            <span className="flex items-center gap-2 text-gray-600 text-sm">
-              <GlobalOutlined className="text-gray-400" />
+            <span className="flex items-center gap-2 text-sm text-secondaryTextColor">
+              <GlobalOutlined className="text-darkGrayColor" />
               {website}
             </span>
           );
@@ -243,66 +253,64 @@ const OrganizationPage: React.FC = () => {
     [],
   );
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Superadmin dashboard
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Review organization applications and monitor platform growth.
+      </p>
+    </div>
+  );
+
+  const stats: StatTileProps[] = [
+    {
+      label: "Applications",
+      value: applicationsCount,
+      icon: <FileTextOutlined />,
+      caption: "all organization requests",
+    },
+    {
+      label: "Pending review",
+      value: pendingCount,
+      icon: <ClockCircleOutlined />,
+      caption: pendingCount === 1 ? "application needs action" : "applications need action",
+    },
+    {
+      label: "Approved",
+      value: approvedCount,
+      icon: <CheckCircleOutlined />,
+      caption: "approved applications",
+    },
+    {
+      label: "Organizations",
+      value: isLoadingOrganizations ? "—" : organizationsCount,
+      icon: <BankOutlined />,
+      caption: "registered organizations",
+    },
+  ];
+
   if (isLoadingApplications) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Manage organization applications</p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Manage organization applications</p>
-      </div>
+    <div className="space-y-5">
+      {pageHeading}
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Applications</p>
-                <h2 className="text-3xl font-bold text-gray-800">
-                  {isLoadingApplications ? "—" : applicationsCount}
-                </h2>
-                <p className="text-xs text-gray-400 mt-1">
-                  Total organization applications
-                </p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-xl">
-                <FileTextOutlined className="text-2xl text-blue-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Organizations</p>
-                <h2 className="text-3xl font-bold text-gray-800">
-                  {isLoadingOrganizations ? "—" : organizationsCount}
-                </h2>
-                <p className="text-xs text-gray-400 mt-1">
-                  Total registered organizations
-                </p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-xl">
-                <BankOutlined className="text-2xl text-green-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => <StatTile key={stat.label} {...stat} />)}
+      </div>
 
       <MyTable<OrganizationApplicationRow>
         title="All Applications"
+        variant="dashboard"
         searchPlaceholder="Search applications..."
         columns={columns}
         dataSource={tableData}
@@ -311,9 +319,13 @@ const OrganizationPage: React.FC = () => {
         paginationConfig={{ pageSize: 5 }}
         scroll={{ x: 1000 }}
         locale={{
-          emptyText: isApplicationsError
-            ? "Failed to load applications. Please try again."
-            : "No applications found",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor"><InboxOutlined /></span>
+              <p className="text-sm font-medium text-blackColor">{isApplicationsError ? "Could not load applications" : "No applications found"}</p>
+              <p className="text-xs text-grayColor">{isApplicationsError ? "Try again in a moment." : "New organization applications will appear here."}</p>
+            </div>
+          ),
         }}
       />
     </div>

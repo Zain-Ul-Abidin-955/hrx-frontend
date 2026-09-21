@@ -33,9 +33,22 @@ const MyModal: React.FC<MyModalProps> = ({
   return (
     <Modal
       title={
-        <div className="flex items-center space-x-2">
-          <ExclamationCircleOutlined className="text-orange-500 text-xl" />
-          <span>{title}</span>
+        <div className="flex items-start gap-3 pr-6">
+          <span
+            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+              danger
+                ? "bg-rose-50 text-rose-600"
+                : "bg-accentColor/10 text-accentDeepColor"
+            }`}
+          >
+            <ExclamationCircleOutlined />
+          </span>
+          <div>
+            <p className="text-base font-semibold text-blackColor">{title}</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              Please review the details before continuing.
+            </p>
+          </div>
         </div>
       }
       open={open}
@@ -45,22 +58,17 @@ const MyModal: React.FC<MyModalProps> = ({
       cancelText={cancelText}
       confirmLoading={confirmLoading}
       okButtonProps={{
-        size: "large",
         danger,
         icon: okIcon,
-        className: danger
-          ? undefined
-          : "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
-      }}
-      cancelButtonProps={{
-        size: "large",
       }}
       centered
     >
       <div className="py-4">
-        <p className="text-gray-700 text-base">{description}</p>
+        <p className="text-sm leading-6 text-secondaryTextColor">{description}</p>
         {subDescription && (
-          <p className="text-gray-500 text-sm mt-2">{subDescription}</p>
+          <p className="mt-3 rounded-xl border border-[#ECEEF3] bg-[#F7F8FB] px-4 py-3 text-xs text-grayColor">
+            {subDescription}
+          </p>
         )}
       </div>
     </Modal>

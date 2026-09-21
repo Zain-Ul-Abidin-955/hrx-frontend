@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Avatar, Button, Card, Form, Input, message } from "antd";
+import { Avatar, Button, Form, Input, message } from "antd";
+import { IdcardOutlined, MailOutlined, SaveOutlined, UserOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 import { updateProfile } from "@/api/collection/profile";
 import useUserStore from "@/store/userStore";
@@ -19,6 +20,9 @@ const ProfileSettingsPage: React.FC = () => {
   const userName = getUserDisplayName(user);
   const userEmail = user?.email ?? "";
   const avatarInitial = getNameInitial(userName);
+  const roleLabel = user?.role
+    ? user.role.replace(/_/g, " ").replace(/\b\w/g, (letter: string) => letter.toUpperCase())
+    : "User";
 
   React.useEffect(() => {
     if (!user) return;
@@ -46,59 +50,67 @@ const ProfileSettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-140px)] space-y-6">
+    <div className="w-full space-y-5">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800">Profile</h1>
-        <p className="text-gray-600 mt-1">Manage your profile information</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-blackColor">Profile</h1>
+        <p className="mt-1 text-sm text-grayColor">Manage your identity and account information.</p>
       </div>
 
-      <Card className="w-full min-h-[calc(100vh-260px)]">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          initialValues={{ name: userName }}
-          className="w-full max-w-4xl"
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* <Form.Item label="Profile" className="lg:col-span-2 mb-0">
-              <div className="flex items-center gap-4">
-                <Avatar
-                  size={72}
-                  className="!bg-primaryColor !text-white shrink-0 text-2xl font-semibold"
-                >
-                  {avatarInitial}
-                </Avatar>
-              </div>
-            </Form.Item> */}
-
-            <Form.Item
-              label="Name"
-              name="name"
-              className="mb-0"
-              // rules={[{ required: true, message: "Please enter your name" }]}
-            >
-              <Input size="large" placeholder="Enter your name" />
-            </Form.Item>
-
-            <Form.Item label="Email" className="mb-0">
-              <Input size="large" value={userEmail} disabled />
-            </Form.Item>
+      <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="hrx-card flex flex-col items-center px-6 py-8 text-center">
+          <Avatar
+            size={72}
+            className="!bg-accentColor/10 !text-xl !font-semibold !text-accentDeepColor"
+          >
+            {avatarInitial}
+          </Avatar>
+          <p className="mt-4 text-base font-semibold text-blackColor">{userName || "Your profile"}</p>
+          <p className="mt-1 text-xs text-darkGrayColor">{roleLabel}</p>
+          <div className="mt-6 w-full border-t border-[#ECEEF3] pt-5">
+            <div className="flex items-center gap-2 text-left text-xs text-grayColor">
+              <MailOutlined className="shrink-0 text-darkGrayColor" />
+              <span className="truncate">{userEmail || "No email available"}</span>
+            </div>
           </div>
+        </aside>
 
-          <Form.Item className="mb-0 pt-5 flex justify-end">
-            <Button
-              htmlType="submit"
-              type="primary"
-              size="large"
-              loading={isPending}
-              className="!bg-primaryColor border-0 px-8"
-            >
-              Save Profile
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+        <section className="hrx-card p-5 sm:p-6">
+          <div className="mb-5 flex items-center gap-2.5 border-b border-[#ECEEF3] pb-4">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accentColor/10 text-accentDeepColor"><IdcardOutlined /></span>
+            <div>
+              <h2 className="text-sm font-semibold text-blackColor">Account details</h2>
+              <p className="mt-0.5 text-xs text-grayColor">Keep your display name accurate across HRX.</p>
+            </div>
+          </div>
+          <Form
+            form={form}
+            layout="vertical"
+            requiredMark={false}
+            onFinish={onFinish}
+            initialValues={{ name: userName }}
+          >
+            <div className="grid gap-x-5 lg:grid-cols-2">
+              <Form.Item
+                label={<span className="font-medium text-secondaryTextColor">Name</span>}
+                name="name"
+                rules={[{ required: true, message: "Please enter your name" }]}
+              >
+                <Input size="large" prefix={<UserOutlined className="text-darkGrayColor" />} placeholder="Enter your name" />
+              </Form.Item>
+
+              <Form.Item label={<span className="font-medium text-secondaryTextColor">Email</span>}>
+                <Input size="large" prefix={<MailOutlined className="text-darkGrayColor" />} value={userEmail} disabled />
+              </Form.Item>
+            </div>
+
+            <div className="flex justify-end border-t border-[#ECEEF3] pt-5">
+              <Button htmlType="submit" type="primary" icon={<SaveOutlined />} loading={isPending}>
+                Save changes
+              </Button>
+            </div>
+          </Form>
+        </section>
+      </div>
     </div>
   );
 };

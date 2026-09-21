@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Button, Card, Col, Row, Tag } from "antd";
+import { Button, Tag } from "antd";
 import {
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
+  InboxOutlined,
   LoginOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
@@ -34,6 +35,8 @@ import {
 } from "@/utils/leaveHelpers";
 import type { AttendanceDayRow } from "@/types/attendance";
 import type { LeaveRequestRow } from "@/types/leave";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
+import Panel from "@/components/dashboard/Panel";
 
 const EmployeeDashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user);
@@ -112,7 +115,7 @@ const EmployeeDashboardPage: React.FC = () => {
       dataIndex: "dateLabel",
       key: "dateLabel",
       render: (value: string) => (
-        <span className="font-semibold text-gray-800">{value}</span>
+        <span className="font-semibold text-blackColor">{value}</span>
       ),
     },
     {
@@ -143,7 +146,7 @@ const EmployeeDashboardPage: React.FC = () => {
       dataIndex: "typeLabel",
       key: "typeLabel",
       render: (value: string) => (
-        <Tag color="blue" className="capitalize">
+        <Tag color="geekblue" className="capitalize">
           {value}
         </Tag>
       ),
@@ -172,13 +175,21 @@ const EmployeeDashboardPage: React.FC = () => {
 
   const isLoading = isLoadingAttendance || isLoadingLeaves;
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Welcome, {displayName}
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Your attendance and leave overview for this month.
+      </p>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Your attendance and leave overview</p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
@@ -188,146 +199,95 @@ const EmployeeDashboardPage: React.FC = () => {
     ? formatAttendanceStatus(todayAttendance.status)
     : "Not recorded";
 
+  const stats: StatTileProps[] = [
+    {
+      label: "Today",
+      value: todayStatus,
+      icon: <CheckCircleOutlined />,
+      caption: "current attendance status",
+    },
+    {
+      label: "Present this month",
+      value: attendanceStats.present + attendanceStats.checkedIn,
+      icon: <LoginOutlined />,
+      caption: "recorded working days",
+    },
+    {
+      label: "Absent this month",
+      value: attendanceStats.absent,
+      icon: <LogoutOutlined />,
+      caption: "days marked absent",
+    },
+    {
+      label: "Pending leaves",
+      value: leaveStats.pending,
+      icon: <ClockCircleOutlined />,
+      caption: "requests awaiting review",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Welcome, {displayName}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Overview of your attendance and leave this month
-          </p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {pageHeading}
         <div className="flex gap-3">
           <Link href="/employee/attendance">
             <Button
               type="primary"
               icon={<CalendarOutlined />}
-              size="large"
-              className="!bg-primaryColor"
             >
               Attendance
             </Button>
           </Link>
           <Link href="/employee/leaves">
-            <Button icon={<FileTextOutlined />} size="large">
+            <Button icon={<FileTextOutlined />}>
               Leaves
             </Button>
           </Link>
         </div>
+      </header>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => <StatTile key={stat.label} {...stat} />)}
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Today</p>
-                <p className="text-2xl font-bold text-gray-800 capitalize">
-                  {todayStatus}
-                </p>
-              </div>
-              <div className="bg-green-50 p-3 rounded-lg">
-                <CheckCircleOutlined className="text-3xl text-green-600" />
-              </div>
+      <Panel title="Leave overview" icon={<FileTextOutlined />}>
+        <div className="grid divide-y divide-[#ECEEF3] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {[
+            ["Approved requests", leaveStats.approved],
+            ["Rejected requests", leaveStats.rejected],
+            ["Leave days this month", attendanceStats.onLeave],
+          ].map(([label, value]) => (
+            <div key={label} className="px-1 py-3 first:pt-0 last:pb-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:last:pr-0">
+              <p className="text-xs text-darkGrayColor">{label}</p>
+              <p className="mt-1 text-2xl font-semibold text-blackColor">{value}</p>
             </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Present This Month</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {attendanceStats.present + attendanceStats.checkedIn}
-                </p>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <LoginOutlined className="text-3xl text-blue-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Absent This Month</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {attendanceStats.absent}
-                </p>
-              </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <LogoutOutlined className="text-3xl text-red-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Pending Leaves</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {leaveStats.pending}
-                </p>
-              </div>
-              <div className="bg-orange-50 p-3 rounded-lg">
-                <ClockCircleOutlined className="text-3xl text-orange-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+          ))}
+        </div>
+      </Panel>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Card className="text-center h-full">
-            <p className="text-gray-500 text-sm mb-1">Approved Leaves</p>
-            <p className="text-3xl font-bold text-green-600">{leaveStats.approved}</p>
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className="text-center h-full">
-            <p className="text-gray-500 text-sm mb-1">Rejected Leaves</p>
-            <p className="text-3xl font-bold text-red-600">{leaveStats.rejected}</p>
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className="text-center h-full">
-            <p className="text-gray-500 text-sm mb-1">On Leave Days (Month)</p>
-            <p className="text-3xl font-bold text-purple-600">
-              {attendanceStats.onLeave}
-            </p>
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
+      <div className="grid gap-4 xl:grid-cols-2">
           <MyTable<AttendanceDayRow>
             title="Recent Attendance"
+            variant="dashboard"
             showSearch={false}
             columns={attendanceColumns}
             dataSource={recentAttendance}
             paginationConfig={{ pageSize: 5 }}
             scroll={{ x: 600 }}
-            locale={{ emptyText: "No attendance records this month" }}
+            locale={{ emptyText: <div className="flex flex-col items-center gap-2 py-7 text-grayColor"><InboxOutlined className="text-lg text-accentDeepColor" /><span>No attendance records this month</span></div> }}
           />
-        </Col>
-        <Col xs={24} lg={12}>
           <MyTable<LeaveRequestRow>
             title="Recent Leave Requests"
+            variant="dashboard"
             showSearch={false}
             columns={leaveColumns}
             dataSource={recentLeaves}
             paginationConfig={{ pageSize: 5 }}
             scroll={{ x: 600 }}
-            locale={{ emptyText: "No leave requests yet" }}
+            locale={{ emptyText: <div className="flex flex-col items-center gap-2 py-7 text-grayColor"><InboxOutlined className="text-lg text-accentDeepColor" /><span>No leave requests yet</span></div> }}
           />
-        </Col>
-      </Row>
+      </div>
     </div>
   );
 };

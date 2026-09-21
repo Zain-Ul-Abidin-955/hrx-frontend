@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Button, Card, Col, DatePicker, Row, Tag, message } from "antd";
+import { Button, DatePicker, Tag, message } from "antd";
 import {
   CalendarOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
+  InboxOutlined,
   LoginOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
@@ -15,6 +15,7 @@ import { isAxiosError } from "axios";
 import dayjs, { type Dayjs } from "dayjs";
 import MyTable from "@/components/table/MyTable";
 import { LoadingSpinner } from "@/components/loader/Loading";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 import {
   checkInAttendance,
   checkOutAttendance,
@@ -143,7 +144,7 @@ const EmployeeAttendancePage: React.FC = () => {
       dataIndex: "dateLabel",
       key: "dateLabel",
       render: (date: string) => (
-        <span className="font-semibold text-gray-800">{date}</span>
+        <span className="font-semibold text-blackColor">{date}</span>
       ),
     },
     {
@@ -151,21 +152,21 @@ const EmployeeAttendancePage: React.FC = () => {
       dataIndex: "checkInLabel",
       key: "checkInLabel",
       render: (time: string) =>
-        time === "—" ? <Tag color="red">Missing</Tag> : time,
+        time === "—" ? <Tag color="red">Missing</Tag> : <span className="font-medium text-secondaryTextColor">{time}</span>,
     },
     {
       title: "Check-Out",
       dataIndex: "checkOutLabel",
       key: "checkOutLabel",
       render: (time: string) =>
-        time === "—" ? <Tag color="red">Missing</Tag> : time,
+        time === "—" ? <Tag color="red">Missing</Tag> : <span className="font-medium text-secondaryTextColor">{time}</span>,
     },
     {
       title: "Working Hours",
       dataIndex: "workingHours",
       key: "workingHours",
       render: (hours: string) => (
-        <span className="font-semibold text-gray-800">{hours}</span>
+        <span className="font-semibold tabular-nums text-blackColor">{hours}</span>
       ),
     },
     {
@@ -184,31 +185,59 @@ const EmployeeAttendancePage: React.FC = () => {
     ? formatAttendanceStatus(todayRecord.status)
     : "Not recorded";
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        My attendance
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Mark today&apos;s attendance and review your working history.
+      </p>
+    </div>
+  );
+
+  const stats: StatTileProps[] = [
+    {
+      label: "Today",
+      value: todayStatusLabel,
+      icon: <CheckCircleOutlined />,
+      caption: "current attendance status",
+    },
+    {
+      label: "Check in",
+      value: formatAttendanceTime(todayRecord?.check_in_at),
+      icon: <LoginOutlined />,
+      caption: "today's start time",
+    },
+    {
+      label: "Check out",
+      value: formatAttendanceTime(todayRecord?.check_out_at),
+      icon: <LogoutOutlined />,
+      caption: "today's end time",
+    },
+    {
+      label: "Present in range",
+      value: presentDays + checkedInDays,
+      icon: <CalendarOutlined />,
+      caption: `${absentDays} absent ${absentDays === 1 ? "day" : "days"}`,
+    },
+  ];
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">My Attendance</h1>
-          <p className="text-gray-600 mt-1">
-            Mark your daily attendance and view history
-          </p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">My Attendance</h1>
-          <p className="text-gray-600 mt-1">
-            Mark your daily attendance and view history
-          </p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {pageHeading}
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          {/* <DatePicker.RangePicker
+          <DatePicker.RangePicker
             value={range}
             allowClear={false}
             disabledDate={(current) => current != null && current.isAfter(dayjs(), "day")}
@@ -217,13 +246,12 @@ const EmployeeAttendancePage: React.FC = () => {
               setRange([values[0], values[1]]);
             }}
             className="w-full sm:w-auto"
-          /> */}
+          />
           <div className="flex gap-3">
             <Button
               type="primary"
               icon={<LoginOutlined />}
-              size="large"
-              className="attendance-action-btn !bg-primaryColor"
+              className="attendance-action-btn"
               loading={isCheckingIn}
               disabled={!canCheckIn || isCheckingOut}
               onClick={() => doCheckIn()}
@@ -233,8 +261,7 @@ const EmployeeAttendancePage: React.FC = () => {
             <Button
               type="primary"
               icon={<LogoutOutlined />}
-              size="large"
-              className="attendance-action-btn !bg-primaryColor"
+              className="attendance-action-btn"
               loading={isCheckingOut}
               disabled={!canCheckOut || isCheckingIn}
               onClick={() => doCheckOut()}
@@ -243,93 +270,15 @@ const EmployeeAttendancePage: React.FC = () => {
             </Button>
           </div>
         </div>
+      </header>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => <StatTile key={stat.label} {...stat} />)}
       </div>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Today Status</p>
-                <p className="text-2xl font-bold text-gray-800 capitalize">
-                  {todayStatusLabel}
-                </p>
-              </div>
-              <div className="bg-green-50 p-3 rounded-lg">
-                <CheckCircleOutlined className="text-3xl text-green-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Check-In</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {formatAttendanceTime(todayRecord?.check_in_at)}
-                </p>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <LoginOutlined className="text-3xl text-blue-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Check-Out</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {formatAttendanceTime(todayRecord?.check_out_at)}
-                </p>
-              </div>
-              <div className="bg-orange-50 p-3 rounded-lg">
-                <LogoutOutlined className="text-3xl text-orange-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">This Range</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {presentDays + checkedInDays} days
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {absentDays} absent
-                </p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-lg">
-                <CalendarOutlined className="text-3xl text-primaryColor" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* <Card className="border-primaryColor/10">
-        <div className="flex items-start gap-4">
-          <div className="bg-primaryColor/10 p-3 rounded-lg">
-            <ClockCircleOutlined className="text-2xl text-primaryColor" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">
-              Attendance Tip
-            </h3>
-            <p className="text-gray-600 mt-1">
-              Self check-out is available within 24 hours of check-in. After that,
-              HR must complete your checkout.
-            </p>
-          </div>
-        </div>
-      </Card> */}
 
       <MyTable<AttendanceDayRow>
         title="Attendance History"
+        variant="dashboard"
         searchPlaceholder="Search by date or status..."
         columns={columns}
         dataSource={tableData}
@@ -338,9 +287,13 @@ const EmployeeAttendancePage: React.FC = () => {
         paginationConfig={{ pageSize: 7 }}
         scroll={{ x: 900 }}
         locale={{
-          emptyText: isError
-            ? "Failed to load attendance. Please try again."
-            : "No attendance records found",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor"><InboxOutlined /></span>
+              <p className="text-sm font-medium text-blackColor">{isError ? "Could not load attendance" : "No attendance records found"}</p>
+              <p className="text-xs text-grayColor">{isError ? "Try again in a moment." : "Attendance for the selected range will appear here."}</p>
+            </div>
+          ),
         }}
       />
     </div>
