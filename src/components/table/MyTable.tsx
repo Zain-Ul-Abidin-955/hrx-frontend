@@ -25,6 +25,8 @@ export interface MyTableProps<T extends object> extends Omit<
   searchKeys?: (keyof T)[];
   showPagination?: boolean;
   paginationConfig?: MyTablePaginationConfig;
+  /** Uses the current dashboard panel treatment instead of the legacy Card. */
+  variant?: "default" | "dashboard";
 }
 
 function MyTable<T extends object>({
@@ -38,6 +40,7 @@ function MyTable<T extends object>({
   dataSource = [],
   scroll,
   className,
+  variant = "default",
   ...tableProps
 }: MyTableProps<T>) {
   const [searchText, setSearchText] = useState("");
@@ -100,30 +103,18 @@ function MyTable<T extends object>({
       ? false
       : currentPage * pageSize < filteredData.length);
 
-  return (
-    <Card
-      title={
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <span className="text-lg font-semibold">{title}</span>
-          {showSearch && (
-            <Input
-              placeholder={searchPlaceholder}
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="!w-full sm:!w-[340px]"
-              allowClear
-            />
-          )}
-        </div>
-      }
-    >
+  const content = (
+    <>
       <Table<T>
         columns={columns}
         dataSource={paginatedData}
         pagination={false}
         scroll={scroll ?? { x: 1200 }}
-        className={`[&_.ant-table-thead>tr>th]:!bg-primaryColor [&_.ant-table-thead>tr>th]:!text-whiteColor [&_.ant-table-thead>tr>th]:!border-primaryColor ${className ?? ""}`}
+        className={`${
+          variant === "dashboard"
+            ? ""
+            : "[&_.ant-table-thead>tr>th]:!bg-primaryColor [&_.ant-table-thead>tr>th]:!text-whiteColor [&_.ant-table-thead>tr>th]:!border-primaryColor"
+        } ${className ?? ""}`}
         {...tableProps}
       />
 
@@ -137,6 +128,47 @@ function MyTable<T extends object>({
           onPageChange={handlePageChange}
         />
       )}
+    </>
+  );
+
+  const header = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <span
+        className={
+          variant === "dashboard"
+            ? "text-sm font-semibold text-blackColor"
+            : "text-lg font-semibold"
+        }
+      >
+        {title}
+      </span>
+      {showSearch && (
+        <Input
+          placeholder={searchPlaceholder}
+          prefix={<SearchOutlined className="text-darkGrayColor" />}
+          value={searchText}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="!w-full sm:!w-[320px]"
+          allowClear
+        />
+      )}
+    </div>
+  );
+
+  if (variant === "dashboard") {
+    return (
+      <section className="hrx-card overflow-hidden">
+        <div className="border-b border-[#ECEEF3] px-5 py-4">{header}</div>
+        <div className="px-0 pb-5 [&_.ant-table-wrapper]:px-0 [&_.mt-6]:px-5">
+          {content}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <Card title={header}>
+      {content}
     </Card>
   );
 }

@@ -3,13 +3,10 @@
 import React, { useMemo, useState } from "react";
 import {
   Button,
-  Card,
-  Col,
   DatePicker,
   Form,
   Input,
   Modal,
-  Row,
   Select,
   Tag,
   message,
@@ -21,6 +18,7 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   CloseOutlined,
+  InboxOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -30,6 +28,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import MyTable from "@/components/table/MyTable";
 import MyModal from "@/components/modal/MyModal";
 import { LoadingSpinner } from "@/components/loader/Loading";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
 import {
   createLeave,
   getOrganizationLeaves,
@@ -115,32 +114,33 @@ const OrganizationLeavesPage: React.FC = () => {
     const pending = leaves.filter((l) => l.status === "pending").length;
     const approved = leaves.filter((l) => l.status === "approved").length;
     const rejected = leaves.filter((l) => l.status === "rejected").length;
-    return [
+    const tiles: StatTileProps[] = [
       {
-        title: "Total Requests",
-        value: String(leaves.length),
-        icon: <CalendarOutlined className="text-3xl text-primaryColor" />,
-        bgColor: "bg-slate-50",
+        label: "Total requests",
+        value: leaves.length,
+        icon: <CalendarOutlined />,
+        caption: "in the current view",
       },
       {
-        title: "Pending",
-        value: String(pending),
-        icon: <ClockCircleOutlined className="text-3xl text-orange-600" />,
-        bgColor: "bg-orange-50",
+        label: "Pending",
+        value: pending,
+        icon: <ClockCircleOutlined />,
+        caption: pending === 1 ? "request needs review" : "requests need review",
       },
       {
-        title: "Approved",
-        value: String(approved),
-        icon: <CheckCircleOutlined className="text-3xl text-green-600" />,
-        bgColor: "bg-green-50",
+        label: "Approved",
+        value: approved,
+        icon: <CheckCircleOutlined />,
+        caption: "requests approved",
       },
       {
-        title: "Rejected",
-        value: String(rejected),
-        icon: <CloseCircleOutlined className="text-3xl text-red-600" />,
-        bgColor: "bg-red-50",
+        label: "Rejected",
+        value: rejected,
+        icon: <CloseCircleOutlined />,
+        caption: "requests declined",
       },
     ];
+    return tiles;
   }, [leaves]);
 
   const { mutate: submitLeave, isPending: isCreating } = useMutation({
@@ -191,12 +191,12 @@ const OrganizationLeavesPage: React.FC = () => {
         key: "employee",
         render: (_value, record) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primaryColor text-white font-semibold shrink-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-sm font-semibold text-accentDeepColor">
               {getNameInitial(record.employeeName)}
             </div>
             <div>
-              <p className="font-semibold text-gray-800">{record.employeeName}</p>
-              <p className="text-xs text-gray-500">{record.designation}</p>
+              <p className="text-sm font-medium text-blackColor">{record.employeeName}</p>
+              <p className="text-xs text-darkGrayColor">{record.designation}</p>
             </div>
           </div>
         ),
@@ -206,7 +206,7 @@ const OrganizationLeavesPage: React.FC = () => {
         dataIndex: "typeLabel",
         key: "typeLabel",
         render: (type: string) => (
-          <Tag color="blue" className="capitalize">
+          <Tag color="geekblue" className="capitalize">
             {type}
           </Tag>
         ),
@@ -226,7 +226,7 @@ const OrganizationLeavesPage: React.FC = () => {
         dataIndex: "days",
         key: "days",
         render: (days: number) => (
-          <span className="font-semibold text-gray-800">{days}</span>
+          <span className="font-semibold tabular-nums text-blackColor">{days}</span>
         ),
       },
       {
@@ -234,7 +234,7 @@ const OrganizationLeavesPage: React.FC = () => {
         dataIndex: "reason",
         key: "reason",
         render: (reason: string) => (
-          <span className="text-gray-600">{reason || "—"}</span>
+          <span className="text-secondaryTextColor">{reason || "—"}</span>
         ),
       },
       {
@@ -289,61 +289,60 @@ const OrganizationLeavesPage: React.FC = () => {
     statusAction?.status === "rejected" ||
     statusAction?.status === "withdrawn";
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Leaves
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Review requests, record decisions, and keep time off visible.
+      </p>
+    </div>
+  );
+
   if (!canManageLeaves) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Leaves</h1>
-          <p className="text-gray-600 mt-1">
-            Review and manage employee leave requests
+      <div className="space-y-5">
+        {pageHeading}
+        <div className="hrx-card flex flex-col items-center gap-2 px-6 py-14 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accentColor/10 text-lg text-accentDeepColor">
+            <InboxOutlined />
+          </span>
+          <p className="mt-1 text-sm font-medium text-blackColor">
+            You do not have access to leave management
+          </p>
+          <p className="max-w-sm text-sm text-grayColor">
+            Ask an organization admin to grant you leave-management permissions.
           </p>
         </div>
-        <Card>
-          <p className="text-gray-600">
-            You do not have permission to manage organization leave requests.
-          </p>
-        </Card>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Leaves</h1>
-          <p className="text-gray-600 mt-1">
-            Review and manage employee leave requests
-          </p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Leaves</h1>
-          <p className="text-gray-600 mt-1">
-            Review and manage employee leave requests
-          </p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {pageHeading}
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <Select
             value={statusFilter}
             options={LEAVE_STATUS_FILTER_OPTIONS}
             onChange={(value) => setStatusFilter(value)}
             className="w-full sm:w-[180px]"
-            size="large"
           />
           {canApplyLeave && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              size="large"
-              className="!bg-primaryColor"
               onClick={() => {
                 createForm.resetFields();
                 setIsCreateOpen(true);
@@ -353,26 +352,17 @@ const OrganizationLeavesPage: React.FC = () => {
             </Button>
           )}
         </div>
-      </div>
+      </header>
 
-      <Row gutter={[16, 16]}>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <Col xs={24} sm={12} lg={6} key={stat.title}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
-                </div>
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>{stat.icon}</div>
-              </div>
-            </Card>
-          </Col>
+          <StatTile key={stat.label} {...stat} />
         ))}
-      </Row>
+      </div>
 
       <MyTable<LeaveRequestRow>
         title="All Leave Requests"
+        variant="dashboard"
         searchPlaceholder="Search leave requests..."
         columns={columns}
         dataSource={tableData}
@@ -387,14 +377,31 @@ const OrganizationLeavesPage: React.FC = () => {
         paginationConfig={{ pageSize: 5 }}
         scroll={{ x: 1100 }}
         locale={{
-          emptyText: isError
-            ? "Failed to load leave requests. Please try again."
-            : "No leave requests found",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor">
+                <InboxOutlined />
+              </span>
+              <p className="text-sm font-medium text-blackColor">
+                {isError ? "Could not load leave requests" : "No leave requests found"}
+              </p>
+              <p className="text-xs text-grayColor">
+                {isError ? "Try again in a moment." : "Requests will appear here when employees submit them."}
+              </p>
+            </div>
+          ),
         }}
       />
 
       <Modal
-        title="Apply Leave"
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">Apply for leave</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              Send a dated request to your organization for review.
+            </p>
+          </div>
+        }
         open={isCreateOpen}
         onCancel={() => {
           if (isCreating) return;
@@ -402,12 +409,10 @@ const OrganizationLeavesPage: React.FC = () => {
           createForm.resetFields();
         }}
         onOk={() => createForm.submit()}
-        okText="Submit Request"
+        okText="Submit request"
         confirmLoading={isCreating}
-        okButtonProps={{
-          className:
-            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
-        }}
+        okButtonProps={{ icon: <PlusOutlined /> }}
+        width={620}
         centered
         destroyOnHidden
       >
@@ -426,47 +431,38 @@ const OrganizationLeavesPage: React.FC = () => {
           }}
           className="pt-4"
         >
-          <Form.Item
-            name="leave_type"
-            label={
-              <span className="text-secondaryTextColor font-medium">
-                Leave Type
-              </span>
-            }
-            rules={[{ required: true, message: "Please select leave type" }]}
-          >
-            <Select
-              size="large"
-              placeholder="Select leave type"
-              options={LEAVE_TYPE_OPTIONS}
-            />
-          </Form.Item>
-          <Form.Item
-            name="range"
-            label={
-              <span className="text-secondaryTextColor font-medium">
-                Date Range
-              </span>
-            }
-            rules={[{ required: true, message: "Please select leave dates" }]}
-          >
-            <DatePicker.RangePicker
-              className="w-full"
-              size="large"
-              disabledDate={(current) =>
-                current != null && current.isBefore(dayjs(), "day")
-              }
-            />
-          </Form.Item>
+          <div className="rounded-xl border border-accentColor/20 bg-accentColor/[0.05] px-4 py-3 text-xs leading-5 text-grayColor">
+            Requests remain pending until an HR manager or organization admin reviews them.
+          </div>
+          <div className="mt-5 grid gap-x-4 md:grid-cols-2">
+            <Form.Item
+              name="leave_type"
+              label={<span className="font-medium text-secondaryTextColor">Leave Type</span>}
+              rules={[{ required: true, message: "Please select leave type" }]}
+            >
+              <Select size="large" placeholder="Select leave type" options={LEAVE_TYPE_OPTIONS} />
+            </Form.Item>
+            <Form.Item
+              name="range"
+              label={<span className="font-medium text-secondaryTextColor">Date Range</span>}
+              rules={[{ required: true, message: "Please select leave dates" }]}
+            >
+              <DatePicker.RangePicker
+                className="w-full"
+                size="large"
+                disabledDate={(current) => current != null && current.isBefore(dayjs(), "day")}
+              />
+            </Form.Item>
+          </div>
           <Form.Item
             name="reason"
             label={
-              <span className="text-secondaryTextColor font-medium">Reason</span>
+              <span className="font-medium text-secondaryTextColor">Reason</span>
             }
             rules={[{ required: true, message: "Please enter a reason" }]}
           >
             <Input.TextArea
-              rows={3}
+              rows={4}
               placeholder="Explain your leave reason"
               className="rounded-lg"
             />
@@ -476,7 +472,14 @@ const OrganizationLeavesPage: React.FC = () => {
 
       {needsReason ? (
         <Modal
-          title="Reject Leave Request"
+          title={
+            <div>
+              <p className="text-base font-semibold text-blackColor">Reject leave request</p>
+              <p className="mt-0.5 text-xs font-normal text-grayColor">
+                Record a clear reason so the employee understands the decision.
+              </p>
+            </div>
+          }
           open={statusAction != null}
           onCancel={() => {
             if (isUpdatingStatus) return;
@@ -490,16 +493,16 @@ const OrganizationLeavesPage: React.FC = () => {
             danger: true,
             icon: <CloseOutlined />,
           }}
+          width={560}
           centered
           destroyOnHidden
         >
-          <p className="text-gray-600 mb-4">
-            Reject leave for{" "}
-            <span className="font-semibold text-gray-800">
-              {statusAction?.leave.employeeName}
-            </span>
-            . A reason is required.
-          </p>
+          <div className="mb-5 rounded-xl border border-[#ECEEF3] bg-[#F7F8FB] px-4 py-3">
+            <p className="text-sm font-medium text-blackColor">{statusAction?.leave.employeeName}</p>
+            <p className="mt-1 text-xs text-grayColor">
+              {statusAction ? `${statusAction.leave.typeLabel} leave · ${statusAction.leave.fromLabel} to ${statusAction.leave.toLabel}` : ""}
+            </p>
+          </div>
           <Form
             form={rejectForm}
             layout="vertical"

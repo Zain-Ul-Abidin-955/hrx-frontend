@@ -1,14 +1,19 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Form, Modal, Select, Tag, message } from "antd";
+import { Button, Col, Form, Modal, Row, Select, message } from "antd";
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  IdcardOutlined,
+  InboxOutlined,
   MailOutlined,
   PhoneOutlined,
   PlusOutlined,
+  SafetyCertificateOutlined,
   SaveOutlined,
+  TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -33,6 +38,8 @@ import type {
 } from "@/types/employee";
 import { getNameInitial } from "@/utils/getNameInitial";
 import useUserStore from "@/store/userStore";
+import StatTile, { type StatTileProps } from "@/components/dashboard/StatTile";
+import { FormSection } from "@/components/dashboard/DefinitionGrid";
 
 const ALL_EMPLOYEE_ROLE_OPTIONS: { label: string; value: EmployeeRole }[] = [
   { label: "Employee", value: "employee" },
@@ -159,6 +166,39 @@ const EmployeesPage: React.FC = () => {
 
   const totalCount = tableData.length;
   const activeCount = tableData.filter((item) => item.is_active).length;
+  const hrManagerCount = tableData.filter(
+    (item) => item.user?.role === "hr_manager",
+  ).length;
+  const employeeCount = tableData.filter(
+    (item) => item.user?.role === "employee",
+  ).length;
+
+  const stats: StatTileProps[] = [
+    {
+      label: "Total people",
+      value: totalCount,
+      icon: <TeamOutlined />,
+      caption: totalCount === 1 ? "person in your workforce" : "people in your workforce",
+    },
+    {
+      label: "Active",
+      value: activeCount,
+      icon: <CheckCircleOutlined />,
+      caption: totalCount ? `${Math.round((activeCount / totalCount) * 100)}% of the team` : "no employees yet",
+    },
+    {
+      label: "Employees",
+      value: employeeCount,
+      icon: <IdcardOutlined />,
+      caption: "standard employee access",
+    },
+    {
+      label: "HR managers",
+      value: hrManagerCount,
+      icon: <SafetyCertificateOutlined />,
+      caption: "can manage people and hiring",
+    },
+  ];
 
   const columns: ColumnsType<EmployeeRow> = useMemo(
     () => [
@@ -169,12 +209,12 @@ const EmployeesPage: React.FC = () => {
           const fullName = getFullName(record.first_name, record.last_name);
           return (
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primaryColor text-white font-semibold shrink-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-sm font-semibold text-accentDeepColor">
                 {getNameInitial(fullName)}
               </div>
               <div>
-                <p className="font-semibold text-gray-800">{fullName || "—"}</p>
-                <p className="text-xs text-gray-500 capitalize">
+                <p className="text-sm font-medium text-blackColor">{fullName || "—"}</p>
+                <p className="text-xs capitalize text-darkGrayColor">
                   {formatRole(record.user?.role)}
                 </p>
               </div>
@@ -187,15 +227,17 @@ const EmployeesPage: React.FC = () => {
         dataIndex: "designation",
         key: "designation",
         render: (designation: string) => (
-          <Tag color="blue">{designation || "—"}</Tag>
+          <span className="inline-flex rounded-md bg-accentColor/10 px-2 py-0.5 text-xs font-medium text-accentDeepColor">
+            {designation || "—"}
+          </span>
         ),
       },
       {
         title: "Email",
         key: "email",
         render: (_value, record) => (
-          <div className="flex items-center gap-2 text-gray-600">
-            <MailOutlined className="text-gray-400" />
+          <div className="flex items-center gap-2 text-secondaryTextColor">
+            <MailOutlined className="text-darkGrayColor" />
             <span className="text-sm">{record.user?.email || "—"}</span>
           </div>
         ),
@@ -205,8 +247,8 @@ const EmployeesPage: React.FC = () => {
         dataIndex: "phone",
         key: "phone",
         render: (phone: string | null) => (
-          <div className="flex items-center gap-2 text-gray-600">
-            <PhoneOutlined className="text-gray-400" />
+          <div className="flex items-center gap-2 text-secondaryTextColor">
+            <PhoneOutlined className="text-darkGrayColor" />
             <span className="text-sm">{phone || "—"}</span>
           </div>
         ),
@@ -216,12 +258,13 @@ const EmployeesPage: React.FC = () => {
         key: "action",
         width: isHrManager ? 80 : 130,
         render: (_value, record) => (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               type="text"
               icon={<EditOutlined />}
               aria-label={`Edit ${getFullName(record.first_name, record.last_name)}`}
-              className="w-12! h-12! rounded-xl! bg-gray-50! text-slate-600! hover:bg-gray-100!"
+              size="small"
+              className="text-grayColor!"
               onClick={() => {
                 editForm.resetFields();
                 setEditingId(record.id);
@@ -233,7 +276,7 @@ const EmployeesPage: React.FC = () => {
                 danger
                 icon={<DeleteOutlined />}
                 aria-label={`Delete ${getFullName(record.first_name, record.last_name)}`}
-                className="w-12! h-12! rounded-xl! bg-red-50! hover:bg-red-100!"
+                size="small"
                 onClick={() => setDeleteTarget(record)}
               />
             )}
@@ -244,30 +287,34 @@ const EmployeesPage: React.FC = () => {
     [editForm, isHrManager],
   );
 
+  const pageHeading = (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight text-blackColor">
+        Employees
+      </h1>
+      <p className="mt-1 text-sm text-grayColor">
+        Keep your team directory, roles, and contact details up to date.
+      </p>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Employees</h1>
-          <p className="text-gray-600 mt-1">Manage your workforce</p>
-        </div>
+      <div className="space-y-5">
+        {pageHeading}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Employees</h1>
-          <p className="text-gray-600 mt-1">Manage your workforce</p>
-        </div>
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {pageHeading}
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          size="large"
-          className="!bg-primaryColor"
+          className="shrink-0"
           onClick={() => {
             createForm.resetFields();
             setIsCreateOpen(true);
@@ -275,25 +322,17 @@ const EmployeesPage: React.FC = () => {
         >
           Add Employee
         </Button>
-      </div>
+      </header>
 
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
-          <div className="text-center">
-            <p className="text-blue-600 text-sm font-medium">Total</p>
-            <p className="text-3xl font-bold text-blue-700">{totalCount}</p>
-          </div>
-        </Card>
-        <Card className="bg-green-50 border-green-200">
-          <div className="text-center">
-            <p className="text-green-600 text-sm font-medium">Active</p>
-            <p className="text-3xl font-bold text-green-700">{activeCount}</p>
-          </div>
-        </Card>
-      </div> */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatTile key={stat.label} {...stat} />
+        ))}
+      </div>
 
       <MyTable<EmployeeRow>
         title="All Employees"
+        variant="dashboard"
         searchPlaceholder="Search employees..."
         columns={columns}
         dataSource={tableData}
@@ -309,14 +348,33 @@ const EmployeesPage: React.FC = () => {
         ]}
         scroll={{ x: 1100 }}
         locale={{
-          emptyText: isError
-            ? "Failed to load employees. Please try again."
-            : "No employees found",
+          emptyText: (
+            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accentColor/10 text-accentDeepColor">
+                <InboxOutlined />
+              </span>
+              <p className="text-sm font-medium text-blackColor">
+                {isError ? "Could not load employees" : "No employees found"}
+              </p>
+              <p className="text-xs text-grayColor">
+                {isError
+                  ? "Try again in a moment."
+                  : "Add your first employee to start building the directory."}
+              </p>
+            </div>
+          ),
         }}
       />
 
       <Modal
-        title="Add Employee"
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">Add employee</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              Create their account and add them to your organization directory.
+            </p>
+          </div>
+        }
         open={isCreateOpen}
         onCancel={() => {
           if (isCreating) return;
@@ -324,14 +382,13 @@ const EmployeesPage: React.FC = () => {
           createForm.resetFields();
         }}
         onOk={() => createForm.submit()}
-        okText="Create Employee"
+        okText="Create employee"
         cancelText="Cancel"
         confirmLoading={isCreating}
         okButtonProps={{
           icon: <PlusOutlined />,
-          className:
-            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
         }}
+        width={680}
         centered
         destroyOnHidden
       >
@@ -349,53 +406,52 @@ const EmployeesPage: React.FC = () => {
           initialValues={{ role: "employee" }}
           className="pt-4"
         >
-          <CustomInput
-            name="first_name"
-            label="First Name"
-            placeholder="Enter first name"
-            icon={<UserOutlined />}
-          />
-          <CustomInput
-            name="last_name"
-            label="Last Name"
-            placeholder="Enter last name"
-            icon={<UserOutlined />}
-          />
-          <CustomInput
-            name="email"
-            label="Email"
-            type="email"
-            placeholder="Enter email"
-            icon={<MailOutlined />}
-          />
-          <CustomInput
-            name="phone"
-            label="Phone"
-            placeholder="Enter phone number"
-            icon={<PhoneOutlined />}
-            required={false}
-          />
-          <CustomInput
-            name="designation"
-            label="Designation"
-            placeholder="e.g. Software Engineer"
-          />
-          <Form.Item
-            name="role"
-            label={<span className="text-secondaryTextColor font-medium">Role</span>}
-            rules={[{ required: true, message: "Please select a role" }]}
-          >
-            <Select
-              size="large"
-              options={createRoleOptions}
-              className="w-full"
-            />
-          </Form.Item>
+          <FormSection title="Personal details">
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <CustomInput name="first_name" label="First Name" placeholder="Enter first name" icon={<UserOutlined />} />
+              </Col>
+              <Col xs={24} md={12}>
+                <CustomInput name="last_name" label="Last Name" placeholder="Enter last name" icon={<UserOutlined />} />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <CustomInput name="email" label="Email" type="email" placeholder="Enter email" icon={<MailOutlined />} />
+              </Col>
+              <Col xs={24} md={12}>
+                <CustomInput name="phone" label="Phone" placeholder="Enter phone number" icon={<PhoneOutlined />} required={false} />
+              </Col>
+            </Row>
+          </FormSection>
+          <FormSection title="Work access" className="mt-5">
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <CustomInput name="designation" label="Designation" placeholder="e.g. Software Engineer" />
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="role"
+                  label={<span className="font-medium text-secondaryTextColor">Role</span>}
+                  rules={[{ required: true, message: "Please select a role" }]}
+                >
+                  <Select size="large" options={createRoleOptions} className="w-full" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </FormSection>
         </Form>
       </Modal>
 
       <Modal
-        title="Edit Employee"
+        title={
+          <div>
+            <p className="text-base font-semibold text-blackColor">Edit employee</p>
+            <p className="mt-0.5 text-xs font-normal text-grayColor">
+              Update the employee&apos;s profile and organization access.
+            </p>
+          </div>
+        }
         open={editingId != null}
         onCancel={() => {
           if (isUpdating) return;
@@ -403,14 +459,13 @@ const EmployeesPage: React.FC = () => {
           editForm.resetFields();
         }}
         onOk={() => editForm.submit()}
-        okText="Save Changes"
+        okText="Save changes"
         cancelText="Cancel"
         confirmLoading={isUpdating}
         okButtonProps={{
           icon: <SaveOutlined />,
-          className:
-            "!bg-primaryColor !text-white !border-primaryColor hover:!bg-primaryColor/90",
         }}
+        width={680}
         centered
         destroyOnHidden
       >
@@ -435,41 +490,33 @@ const EmployeesPage: React.FC = () => {
             }
             className="pt-4"
           >
-            <CustomInput
-              name="first_name"
-              label="First Name"
-              placeholder="Enter first name"
-              icon={<UserOutlined />}
-            />
-            <CustomInput
-              name="last_name"
-              label="Last Name"
-              placeholder="Enter last name"
-              icon={<UserOutlined />}
-            />
-            <CustomInput
-              name="phone"
-              label="Phone"
-              placeholder="Enter phone number"
-              icon={<PhoneOutlined />}
-              required={false}
-            />
-            <CustomInput
-              name="designation"
-              label="Designation"
-              placeholder="e.g. Software Engineer"
-            />
-            <Form.Item
-              name="role"
-              label={<span className="text-secondaryTextColor font-medium">Role</span>}
-              rules={[{ required: true, message: "Please select a role" }]}
-            >
-              <Select
-                size="large"
-                options={createRoleOptions}
-                className="w-full"
-              />
-            </Form.Item>
+            <FormSection title="Personal details">
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <CustomInput name="first_name" label="First Name" placeholder="Enter first name" icon={<UserOutlined />} />
+                </Col>
+                <Col xs={24} md={12}>
+                  <CustomInput name="last_name" label="Last Name" placeholder="Enter last name" icon={<UserOutlined />} />
+                </Col>
+              </Row>
+              <CustomInput name="phone" label="Phone" placeholder="Enter phone number" icon={<PhoneOutlined />} required={false} />
+            </FormSection>
+            <FormSection title="Work access" className="mt-5">
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <CustomInput name="designation" label="Designation" placeholder="e.g. Software Engineer" />
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="role"
+                    label={<span className="font-medium text-secondaryTextColor">Role</span>}
+                    rules={[{ required: true, message: "Please select a role" }]}
+                  >
+                    <Select size="large" options={createRoleOptions} className="w-full" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </FormSection>
           </Form>
         )}
       </Modal>

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeftOutlined, BankOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { Card, Empty, Skeleton } from "antd";
+import { Empty, Skeleton } from "antd";
 import { getPublicOrganizationJobs } from "@/api/collection/publicJobs";
-import LandingHeader from "../../components/LandingHeader";
+import JobsShell from "../components/JobsShell";
 import PublicJobCard from "../components/PublicJobCard";
 
 function titleFromSlug(slug: string) {
@@ -25,45 +25,65 @@ export default function PublicOrganizationJobsPage() {
   const organizationName = jobs[0]?.organization.name || titleFromSlug(organizationSlug);
 
   return (
-    <div className="min-h-screen bg-offWhiteColor">
-      <LandingHeader />
-      <section className="bg-primaryColor px-4 py-14 text-whiteColor sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <Link href="/jobs" className="mb-6 inline-flex items-center gap-2 !text-whiteColor/75 hover:!text-whiteColor">
-            <ArrowLeftOutlined /> All organizations
+    <JobsShell>
+      <section className="hrx-grid relative overflow-hidden border-b border-lineColor">
+        <div className="pointer-events-none absolute -left-24 -top-28 h-96 w-96 rounded-full bg-accentColor/15 blur-[120px]" />
+        <div className="relative mx-auto max-w-6xl px-5 pb-14 pt-9 sm:px-8 sm:pb-16 sm:pt-12">
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 text-sm text-mutedColor transition-colors hover:text-lightColor"
+          >
+            <ArrowLeftOutlined className="text-xs" />
+            All open jobs
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-whiteColor/10">
-              <BankOutlined className="text-2xl" />
+
+          <div className="mt-9 flex items-center gap-5">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-accentColor/20 bg-gradient-to-br from-accentColor/20 to-glowColor/10 text-2xl text-indigo-200 shadow-lg shadow-accentColor/10 sm:h-20 sm:w-20 sm:text-3xl">
+              <BankOutlined />
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.16em] text-blue-200">Careers at</p>
-              <h1 className="mt-1 text-4xl font-bold">{organizationName}</h1>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-accentColor">Careers at</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-lightColor sm:text-5xl">
+                {organizationName}
+              </h1>
             </div>
           </div>
         </div>
       </section>
 
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <h2 className="mb-6 text-2xl font-bold text-blackColor">Open positions</h2>
+      <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+        <div className="mb-7 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-accentColor">Join the team</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-lightColor sm:text-3xl">Open positions</h2>
+          </div>
+          {!isLoading && !isError && (
+            <p className="text-sm text-mutedColor">{jobs.length} role{jobs.length === 1 ? "" : "s"}</p>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2].map((item) => (
-              <Card key={item}><Skeleton active paragraph={{ rows: 2 }} /></Card>
+              <div key={item} className="rounded-2xl border border-lineColor bg-panelColor p-6">
+                <Skeleton active paragraph={{ rows: 2 }} />
+              </div>
             ))}
           </div>
         ) : isError ? (
-          <Card><Empty description="This organization’s jobs could not be loaded." /></Card>
+          <div className="rounded-2xl border border-lineColor bg-panelColor px-6 py-14">
+            <Empty description="This organization’s jobs could not be loaded." />
+          </div>
         ) : jobs.length === 0 ? (
-          <Card><Empty description="This organization has no open positions." /></Card>
+          <div className="rounded-2xl border border-lineColor bg-panelColor px-6 py-14">
+            <Empty description="This organization has no open positions right now." />
+          </div>
         ) : (
           <div className="space-y-4">
-            {jobs.map((job) => (
-              <PublicJobCard key={job.slug} job={job} />
-            ))}
+            {jobs.map((job) => <PublicJobCard key={job.slug} job={job} />)}
           </div>
         )}
       </main>
-    </div>
+    </JobsShell>
   );
 }
