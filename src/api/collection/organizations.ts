@@ -48,7 +48,7 @@ export const rejectOrganizationApplication = async (
 // Get all organizations
 export const getOrganizations = async (): Promise<Organization[]> => {
   const response = await axiosInstance.get<Organization[]>(
-    `/organizations`,
+    `/organizations/`,
   );
   return response.data;
 };
