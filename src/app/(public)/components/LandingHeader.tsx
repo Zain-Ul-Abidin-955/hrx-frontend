@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Button } from "antd";
-import { DashboardOutlined, RobotOutlined } from "@ant-design/icons";
+import { DashboardOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import useUserStore from "@/store/userStore";
 import { getDashboardPath } from "@/utils/authRoutes";
@@ -33,65 +32,63 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
   }, [checkSession, shouldCheckSession]);
 
   return (
-    <nav className="bg-whiteColor shadow-sm sticky top-0 z-50 border-b border-grayLightColor/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="sticky top-0 z-50 border-b border-lineColor bg-nightColor/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2.5"
+          aria-label="HRX AI home"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accentColor to-glowColor text-sm font-bold text-white">
+            H
+          </span>
+          <span className="text-[17px] font-semibold tracking-tight text-lightColor">
+            HRX <span className="text-mutedColor">AI</span>
+          </span>
+        </button>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            onClick={() => router.push("/")}
-            className="flex items-center space-x-2 cursor-pointer"
+            onClick={() => router.push("/jobs")}
+            className="rounded-lg px-3 py-2 text-sm text-lightColor transition-colors hover:bg-white/5 sm:px-3.5"
           >
-            <RobotOutlined className="text-3xl text-primaryColor" />
-            <span className="text-2xl font-bold text-primaryColor">HRX AI</span>
+            Open jobs
           </button>
 
-          <div className="flex items-center space-x-4">
-            <Button
-              type="text"
-              size="large"
-              onClick={() => router.push("/jobs")}
-              className="!text-primaryColor"
+          {resolvedSessionLoading ? (
+            <span className="h-9 w-24 animate-pulse rounded-lg bg-panelHighColor" />
+          ) : resolvedDashboardPath ? (
+            <button
+              type="button"
+              onClick={() => router.push(resolvedDashboardPath)}
+              className="inline-flex items-center gap-2 rounded-lg bg-accentColor px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accentDeepColor"
             >
-              Browse Jobs
-            </Button>
-            {resolvedSessionLoading ? (
-              <Button type="primary" size="large" loading disabled>
-                Checking session
-              </Button>
-            ) : resolvedDashboardPath ? (
-              <Button
-                type="primary"
-                size="large"
-                icon={<DashboardOutlined />}
-                onClick={() => router.push(resolvedDashboardPath)}
-                className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90"
+              <DashboardOutlined />
+              <span className="hidden sm:inline">Dashboard</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="hidden rounded-lg px-3.5 py-2 text-sm text-mutedColor transition-colors hover:text-lightColor sm:block"
               >
-                Dashboard
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="default"
-                  size="large"
-                  onClick={() => router.push("/login")}
-                  className="hidden sm:inline-flex !border-primaryColor !text-primaryColor hover:!bg-primaryColor hover:!text-whiteColor"
-                >
-                  Login
-                </Button>
-                <Button
-                  type="primary"
-                  size="large"
-                  onClick={() => router.push("/")}
-                  className="!bg-primaryColor !border-primaryColor hover:!bg-primaryColor/90"
-                >
-                  Get Started
-                </Button>
-              </>
-            )}
-          </div>
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="rounded-lg bg-lightColor px-3.5 py-2 text-sm font-medium text-nightColor transition-colors hover:bg-white"
+              >
+                Get started
+              </button>
+            </>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
 
