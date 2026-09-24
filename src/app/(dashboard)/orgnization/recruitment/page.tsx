@@ -211,7 +211,11 @@ const Recruitment: React.FC = () => {
 
   const { data: applicationsByJob = {}, isFetching: isFetchingApplications } =
     useQuery<Record<string, JobApplication[]>>({
-      queryKey: ["job-applications", jobs.map((job) => job.id).join(",")],
+      queryKey: [
+        "job-applications-map",
+        organizationId,
+        jobs.map((job) => job.id).join(","),
+      ],
       queryFn: async () => {
         const entries = await Promise.all(
           jobs.map(async (job) => {
@@ -230,6 +234,7 @@ const Recruitment: React.FC = () => {
   const refreshRecruitment = () => {
     queryClient.invalidateQueries({ queryKey: ["organization-jobs"] });
     queryClient.invalidateQueries({ queryKey: ["job-applications"] });
+    queryClient.invalidateQueries({ queryKey: ["job-applications-map"] });
   };
 
   const { mutate: saveJob, isPending: isSavingJob } = useMutation({

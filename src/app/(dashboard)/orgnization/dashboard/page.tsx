@@ -10,6 +10,7 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseCircleOutlined,
   FileSearchOutlined,
   PlusOutlined,
   SendOutlined,
@@ -82,6 +83,33 @@ function formatLeaveDuration(startValue: string, endValue: string): string {
   return `${startLabel}${startValue === endValue ? "" : `–${endLabel}`} (${days} ${days === 1 ? "day" : "days"})`;
 }
 
+const QUICK_LINKS = [
+  {
+    href: "/orgnization/employees",
+    label: "Employees",
+    hint: "Manage workforce",
+    icon: <TeamOutlined />,
+  },
+  {
+    href: "/orgnization/attendance",
+    label: "Attendance",
+    hint: "Daily roster",
+    icon: <CheckCircleOutlined />,
+  },
+  {
+    href: "/orgnization/leaves",
+    label: "Leaves",
+    hint: "Review requests",
+    icon: <CalendarOutlined />,
+  },
+  {
+    href: "/orgnization/recruitment",
+    label: "Recruitment",
+    hint: "Hiring pipeline",
+    icon: <FileSearchOutlined />,
+  },
+] as const;
+
 const Dashboard: React.FC = () => {
   const user = useUserStore((state) => state.user);
   const firstName = getUserDisplayName(user).split(" ")[0];
@@ -109,34 +137,75 @@ const Dashboard: React.FC = () => {
     0,
   );
 
+  const totalEmployees = data?.stats.total_employees ?? 0;
+  const presentToday = data?.stats.present_today ?? 0;
+  const onLeaveToday = data?.stats.on_leave_today ?? 0;
+  const attendanceRate = data?.stats.attendance_rate ?? 0;
+  const newHires = data?.stats.new_hires_this_month ?? 0;
+  const pendingLeaveCount = data?.pending_leaves.length ?? 0;
+  const openRoles = data?.open_roles ?? 0;
+  const absentToday = Math.max(0, totalEmployees - presentToday - onLeaveToday);
+
   const stats: StatTileProps[] = [
     {
       label: "Total employees",
-      value: data?.stats.total_employees ?? 0,
+      value: totalEmployees,
       caption:
         user?.role === "hr_manager"
           ? "employees you can manage"
           : "active workforce",
       icon: <TeamOutlined />,
+      href: "/orgnization/employees",
     },
     {
       label: "Present today",
-      value: data?.stats.present_today ?? 0,
-      caption: `${data?.stats.attendance_rate ?? 0}% attendance rate`,
+      value: presentToday,
+      caption: `${attendanceRate}% attendance rate`,
       icon: <CheckCircleOutlined />,
-      meter: data?.stats.attendance_rate ?? 0,
+      meter: attendanceRate,
+      href: "/orgnization/attendance",
+    },
+    {
+      label: "Absent today",
+      value: absentToday,
+      caption: "not checked in",
+      icon: <CloseCircleOutlined />,
+      href: "/orgnization/attendance",
     },
     {
       label: "On leave today",
-      value: data?.stats.on_leave_today ?? 0,
+      value: onLeaveToday,
       caption: "approved leave",
       icon: <CalendarOutlined />,
+      href: "/orgnization/leaves",
+    },
+    {
+      label: "Pending leaves",
+      value: pendingLeaveCount,
+      caption: "awaiting review",
+      icon: <ClockCircleOutlined />,
+      href: "/orgnization/leaves",
+    },
+    {
+      label: "Open roles",
+      value: openRoles,
+      caption: "active job posts",
+      icon: <FileSearchOutlined />,
+      href: "/orgnization/recruitment",
     },
     {
       label: "New hires",
-      value: data?.stats.new_hires_this_month ?? 0,
+      value: newHires,
       caption: "this month",
       icon: <UserAddOutlined />,
+      href: "/orgnization/employees",
+    },
+    {
+      label: "Applications",
+      value: applicationTotal,
+      caption: "last 12 months",
+      icon: <ApartmentOutlined />,
+      href: "/orgnization/recruitment",
     },
   ];
 
@@ -223,36 +292,68 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.12em] text-darkGrayColor">
-            {now
-              ? now.toLocaleDateString(undefined, {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })
-              : " "}
-          </p>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-blackColor">
-            {now ? greetingFor(now) : "Welcome back"}
-            {firstName ? `, ${firstName}` : ""}
-          </h1>
-          <p className="mt-1 text-sm text-grayColor">
-            Here&apos;s what&apos;s happening across your workforce.
-          </p>
+      <section className="hrx-card relative overflow-hidden p-6 sm:p-7">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-accentColor/15 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-glowColor/10 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-darkGrayColor">
+              {now
+                ? now.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })
+                : " "}
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-blackColor">
+              {now ? greetingFor(now) : "Welcome back"}
+              {firstName ? `, ${firstName}` : ""}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-grayColor">
+              Live HR overview across employees, attendance, leaves, and hiring —
+              refreshed from your organization data.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href="/orgnization/employees">
+              <Button icon={<PlusOutlined />}>Add employee</Button>
+            </Link>
+            <Link href="/orgnization/recruitment">
+              <Button type="primary" icon={<FileSearchOutlined />}>
+                Post a job
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex shrink-0 gap-2">
-          <Link href="/orgnization/employees">
-            <Button icon={<PlusOutlined />}>Add employee</Button>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {QUICK_LINKS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="hrx-card group flex items-center gap-3 p-4 !no-underline transition-colors hover:border-accentColor/35"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accentColor/10 text-base text-accentDeepColor">
+              {item.icon}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-blackColor">
+                {item.label}
+              </span>
+              <span className="block text-xs text-darkGrayColor">{item.hint}</span>
+            </span>
+            <ArrowRightOutlined className="text-xs text-darkGrayColor transition-transform group-hover:translate-x-0.5 group-hover:text-accentDeepColor" />
           </Link>
-          <Link href="/orgnization/recruitment">
-            <Button type="primary" icon={<FileSearchOutlined />}>
-              Post a job
-            </Button>
-          </Link>
-        </div>
-      </header>
+        ))}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
@@ -347,7 +448,7 @@ const Dashboard: React.FC = () => {
               href="/orgnization/recruitment"
               className="!text-xs !font-medium !text-accentDeepColor hover:!underline"
             >
-              {data.open_roles} open {data.open_roles === 1 ? "role" : "roles"}
+              {openRoles} open {openRoles === 1 ? "role" : "roles"}
             </Link>
           }
         >
