@@ -10,6 +10,7 @@ import {
   Spin,
   Tooltip,
   message as toast,
+  type InputRef,
 } from "antd";
 import {
   BulbOutlined,
@@ -520,6 +521,7 @@ export default function ChatBot() {
   const [busyProposalId, setBusyProposalId] = useState<string | null>(null);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<InputRef>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingRef = useRef(false);
   const activeAssistantIdRef = useRef<string | null>(null);
@@ -574,6 +576,14 @@ export default function ChatBot() {
     const area = messageAreaRef.current;
     if (area) area.scrollTo({ top: area.scrollHeight, behavior: "smooth" });
   }, [messages, activeTool]);
+
+  useEffect(() => {
+    if (!selectedConversationId || isStreaming) return;
+    const timer = window.setTimeout(() => {
+      inputRef.current?.focus({ cursor: "end" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [selectedConversationId, isStreaming]);
 
   const createConversation = useMutation({
     mutationFn: () => createAIConversation("read_mode"),
@@ -805,6 +815,7 @@ export default function ChatBot() {
       );
       queryClient.invalidateQueries({ queryKey: ["organization-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["job-applications-map"] });
     } catch (error) {
       toast.error(getErrorMessage(error, "Could not confirm the action."));
     } finally {
@@ -1212,7 +1223,9 @@ export default function ChatBot() {
                 )}
                 <div className="flex items-end gap-2 rounded-xl border border-[#ECEEF3] bg-whiteColor px-3 py-2 transition-colors focus-within:border-accentColor/50">
                   <Input.TextArea
+                    ref={inputRef}
                     value={inputValue}
+                    autoFocus
                     autoSize={{ minRows: 1, maxRows: 5 }}
                     maxLength={20_000}
                     placeholder={

@@ -15,7 +15,7 @@ function isAuthFailure(error: unknown): boolean {
     response?: { status?: number; data?: { detail?: unknown; message?: string } };
   };
   const status = err?.response?.status;
-  if (status === 401) return true;
+  // if (status === 401) return true;
 
   // Some backends still use 403 for missing/invalid auth — only treat those as logout.
   if (status !== 403) return false;

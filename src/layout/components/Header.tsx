@@ -135,27 +135,7 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            {/* Search — a real affordance on wide screens, an icon below that. */}
-            <div className="hidden items-center gap-2 rounded-lg border border-lineColor bg-nightSoftColor px-3 py-1.5 text-xs text-mutedColor transition-colors hover:border-accentColor/40 lg:flex">
-              <SearchOutlined />
-              <span>Search</span>
-              <kbd className="ml-6 rounded border border-lineColor px-1.5 py-0.5 font-sans text-[10px] text-mutedColor/80">
-                ⌘K
-              </kbd>
-            </div>
-            <button
-              aria-label="Search"
-              className={`${TOGGLE_BUTTON} lg:hidden`}
-            >
-              <SearchOutlined className="text-[17px]" />
-            </button>
-
-            <button aria-label="Notifications" className={TOGGLE_BUTTON}>
-              <Badge dot offset={[-2, 3]} color="#22D3EE">
-                <BellOutlined className="text-[17px] text-mutedColor" />
-              </Badge>
-            </button>
-
+           
             <span className="hidden h-6 w-px bg-lineColor sm:block" />
 
             {loading && !user ? (

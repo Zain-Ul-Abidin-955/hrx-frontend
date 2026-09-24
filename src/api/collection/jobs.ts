@@ -39,20 +39,28 @@ export const getJobApplications = async (
   jobId: string,
   sort: "rank" | "created_at" = "rank",
 ): Promise<JobApplication[]> => {
-  const response = await axiosInstance.get<JobApplication[]>(
+  const response = await axiosInstance.get<JobApplication[] | { items?: JobApplication[]; data?: JobApplication[] }>(
     `/jobs/${jobId}/applications`,
     { params: { sort } },
   );
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
 };
 
 export const rerankJobApplications = async (
   jobId: string,
 ): Promise<JobApplication[]> => {
-  const response = await axiosInstance.post<JobApplication[]>(
-    `/jobs/${jobId}/applications/rerank`,
-  );
-  return response.data;
+  const response = await axiosInstance.post<
+    JobApplication[] | { items?: JobApplication[]; data?: JobApplication[] }
+  >(`/jobs/${jobId}/applications/rerank`);
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
 };
 
 export const getJobApplication = async (

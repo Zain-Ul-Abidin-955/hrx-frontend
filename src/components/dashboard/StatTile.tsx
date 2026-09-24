@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 
 export interface StatTileProps {
@@ -12,6 +13,8 @@ export interface StatTileProps {
   caption?: string;
   /** Optional progress rail under the value (0–100). */
   meter?: number;
+  /** When set, the tile navigates to this path on click. */
+  href?: string;
 }
 
 /**
@@ -27,54 +30,71 @@ const StatTile: React.FC<StatTileProps> = ({
   direction = "up",
   caption,
   meter,
-}) => (
-  <article className="hrx-card p-5">
-    <div className="flex items-start justify-between gap-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-darkGrayColor">
-        {label}
+  href,
+}) => {
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-darkGrayColor">
+          {label}
+        </p>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-sm text-accentDeepColor">
+          {icon}
+        </span>
+      </div>
+
+      <p className="mt-3 text-[32px] font-semibold leading-none tracking-tight text-blackColor">
+        {value}
       </p>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accentColor/10 text-sm text-accentDeepColor">
-        {icon}
-      </span>
-    </div>
 
-    <p className="mt-3 text-[32px] font-semibold leading-none tracking-tight text-blackColor">
-      {value}
-    </p>
+      {meter !== undefined && (
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#ECEEF3]">
+          <div
+            style={{ width: `${Math.min(100, Math.max(0, meter))}%` }}
+            className="h-full rounded-full bg-accentDeepColor"
+          />
+        </div>
+      )}
 
-    {meter !== undefined && (
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#ECEEF3]">
-        <div
-          style={{ width: `${Math.min(100, Math.max(0, meter))}%` }}
-          className="h-full rounded-full bg-accentDeepColor"
-        />
-      </div>
-    )}
+      {(delta || caption) && (
+        <div className="mt-3 flex items-center gap-1.5 text-xs">
+          {delta && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium ${
+                direction === "up"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-rose-50 text-rose-700"
+              }`}
+            >
+              {direction === "up" ? (
+                <ArrowUpOutlined style={{ fontSize: 10 }} />
+              ) : (
+                <ArrowDownOutlined style={{ fontSize: 10 }} />
+              )}
+              {delta}
+            </span>
+          )}
+          {caption && (
+            <span className="truncate text-darkGrayColor">{caption}</span>
+          )}
+        </div>
+      )}
+    </>
+  );
 
-    {(delta || caption) && (
-      <div className="mt-3 flex items-center gap-1.5 text-xs">
-        {delta && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium ${
-              direction === "up"
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-rose-50 text-rose-700"
-            }`}
-          >
-            {direction === "up" ? (
-              <ArrowUpOutlined style={{ fontSize: 10 }} />
-            ) : (
-              <ArrowDownOutlined style={{ fontSize: 10 }} />
-            )}
-            {delta}
-          </span>
-        )}
-        {caption && (
-          <span className="truncate text-darkGrayColor">{caption}</span>
-        )}
-      </div>
-    )}
-  </article>
-);
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="hrx-card block p-5 no-underline transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accentDeepColor"
+        aria-label={`View ${label}`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className="hrx-card p-5">{content}</article>;
+};
 
 export default StatTile;

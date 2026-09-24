@@ -45,7 +45,7 @@ import {
 import useUserStore from "@/store/userStore";
 import type { Job, JobApplication, JobApplicationStatus } from "@/types/job";
 
-type CandidateFilter = "active" | "all" | JobApplicationStatus;
+type CandidateFilter = "active" | JobApplicationStatus;
 
 interface CandidateRow extends JobApplication {
   key: string;
@@ -137,7 +137,7 @@ export default function JobCandidatesPage() {
   const organizationId = user?.organization_id ?? user?.organization?.id;
   const canManageRecruitment =
     user?.role === "hr_manager" || user?.role === "org_admin";
-  const [filter, setFilter] = useState<CandidateFilter>("all");
+  const [filter, setFilter] = useState<CandidateFilter>("active");
   const [resumeTarget, setResumeTarget] = useState<CandidateRow | null>(null);
 
   const {
@@ -149,11 +149,13 @@ export default function JobCandidatesPage() {
     queryFn: () => getOrganizationJobs(organizationId as string),
     enabled: Boolean(organizationId && canManageRecruitment),
   });
-  const job = jobs.find((candidateJob) => candidateJob.slug === jobSlug);
+  const job = Array.isArray(jobs)
+    ? jobs.find((candidateJob) => candidateJob.slug === jobSlug)
+    : undefined;
   const jobId = job?.id;
 
   const {
-    data: applications = [],
+    data: applicationsData,
     isLoading: isLoadingApplications,
     isFetching: isFetchingApplications,
     isError: isApplicationsError,
@@ -165,6 +167,7 @@ export default function JobCandidatesPage() {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
+  const applications = Array.isArray(applicationsData) ? applicationsData : [];
 
   const candidates = useMemo<CandidateRow[]>(
     () =>
@@ -184,11 +187,16 @@ export default function JobCandidatesPage() {
   );
 
   const visibleCandidates = useMemo(() => {
-    if (filter === "all") return candidates;
-    if (filter === "active") {
-      return candidates.filter((candidate) => candidate.status !== "rejected");
+    if (filter === "rejected") {
+      return candidates.filter((candidate) => candidate.status === "rejected");
     }
-    return candidates.filter((candidate) => candidate.status === filter);
+
+    const withoutRejected = candidates.filter(
+      (candidate) => candidate.status !== "rejected",
+    );
+
+    if (filter === "active") return withoutRejected;
+    return withoutRejected.filter((candidate) => candidate.status === filter);
   }, [candidates, filter]);
 
   const counts = useMemo(
@@ -223,12 +231,14 @@ export default function JobCandidatesPage() {
     onSuccess: (updatedApplication, variables) => {
       queryClient.setQueryData<JobApplication[]>(
         ["job-applications", jobId],
-        (current = []) =>
-          current.map((application) =>
+        (current) => {
+          const list = Array.isArray(current) ? current : [];
+          return list.map((application) =>
             application.id === updatedApplication.id
               ? updatedApplication
               : application,
-          ),
+          );
+        },
       );
       message.success(
         variables.status === "shortlisted"
@@ -238,6 +248,7 @@ export default function JobCandidatesPage() {
       queryClient.invalidateQueries({
         queryKey: ["job-applications", jobId],
       });
+      queryClient.invalidateQueries({ queryKey: ["job-applications-map"] });
     },
     onError: (error, variables) => {
       message.error(
@@ -254,8 +265,12 @@ export default function JobCandidatesPage() {
   const { mutate: rerankCandidates, isPending: isReranking } = useMutation({
     mutationFn: () => rerankJobApplications(jobId as string),
     onSuccess: (rankedApplications) => {
-      queryClient.setQueryData(["job-applications", jobId], rankedApplications);
+      queryClient.setQueryData(
+        ["job-applications", jobId],
+        Array.isArray(rankedApplications) ? rankedApplications : [],
+      );
       message.success(`Rankings updated for ${job?.title ?? "this job"}`);
+      queryClient.invalidateQueries({ queryKey: ["job-applications-map"] });
     },
     onError: (error) => {
       message.error(getErrorMessage(error, "Failed to re-evaluate rankings."));
@@ -271,12 +286,15 @@ export default function JobCandidatesPage() {
     onSuccess: (_result, applicationId) => {
       queryClient.setQueryData<JobApplication[]>(
         ["job-applications", jobId],
-        (current = []) =>
-          current.filter((application) => application.id !== applicationId),
+        (current) => {
+          const list = Array.isArray(current) ? current : [];
+          return list.filter((application) => application.id !== applicationId);
+        },
       );
       if (resumeTarget?.id === applicationId) setResumeTarget(null);
       message.success("Candidate application permanently deleted");
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["job-applications-map"] });
     },
     onError: (error) => {
       message.error(
@@ -500,7 +518,6 @@ export default function JobCandidatesPage() {
 
   const filterOptions = [
     { label: `Active (${counts.active})`, value: "active" },
-    { label: `All (${candidates.length})`, value: "all" },
     {
       label: `Submitted (${candidates.filter((item) => item.status === "submitted").length})`,
       value: "submitted",
@@ -647,7 +664,9 @@ export default function JobCandidatesPage() {
                 <p className="max-w-sm text-sm text-grayColor">
                   {isApplicationsError
                     ? "Something went wrong fetching applications. Try again in a moment."
-                    : "Rejected applications are kept on file until you delete them — switch the filter to see every state."}
+                    : filter === "rejected"
+                      ? "Rejected applications stay here until you delete them."
+                      : "Rejected candidates are hidden here — open the Rejected filter to review them."}
                 </p>
               </div>
             ),

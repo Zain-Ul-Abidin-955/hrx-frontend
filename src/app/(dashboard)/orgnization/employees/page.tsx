@@ -166,11 +166,11 @@ const EmployeesPage: React.FC = () => {
 
   const totalCount = tableData.length;
   const activeCount = tableData.filter((item) => item.is_active).length;
-  const hrManagerCount = tableData.filter(
-    (item) => item.user?.role === "hr_manager",
-  ).length;
   const employeeCount = tableData.filter(
     (item) => item.user?.role === "employee",
+  ).length;
+  const hrManagerCount = tableData.filter(
+    (item) => item.user?.role === "hr_manager",
   ).length;
 
   const stats: StatTileProps[] = [
@@ -192,12 +192,16 @@ const EmployeesPage: React.FC = () => {
       icon: <IdcardOutlined />,
       caption: "standard employee access",
     },
-    {
-      label: "HR managers",
-      value: hrManagerCount,
-      icon: <SafetyCertificateOutlined />,
-      caption: "can manage people and hiring",
-    },
+    ...(!isHrManager
+      ? [
+          {
+            label: "HR managers",
+            value: hrManagerCount,
+            icon: <SafetyCertificateOutlined />,
+            caption: "can manage people and hiring",
+          } satisfies StatTileProps,
+        ]
+      : []),
   ];
 
   const columns: ColumnsType<EmployeeRow> = useMemo(
@@ -324,7 +328,11 @@ const EmployeesPage: React.FC = () => {
         </Button>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={`grid gap-4 sm:grid-cols-2 ${
+          isHrManager ? "xl:grid-cols-3" : "xl:grid-cols-4"
+        }`}
+      >
         {stats.map((stat) => (
           <StatTile key={stat.label} {...stat} />
         ))}
