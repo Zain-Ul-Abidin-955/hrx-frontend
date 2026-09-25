@@ -45,7 +45,7 @@ import {
 import useUserStore from "@/store/userStore";
 import type { Job, JobApplication, JobApplicationStatus } from "@/types/job";
 
-type CandidateFilter = "active" | JobApplicationStatus;
+type CandidateFilter = "active" | "all" | JobApplicationStatus;
 
 interface CandidateRow extends JobApplication {
   key: string;
@@ -137,7 +137,7 @@ export default function JobCandidatesPage() {
   const organizationId = user?.organization_id ?? user?.organization?.id;
   const canManageRecruitment =
     user?.role === "hr_manager" || user?.role === "org_admin";
-  const [filter, setFilter] = useState<CandidateFilter>("active");
+  const [filter, setFilter] = useState<CandidateFilter>("all");
   const [resumeTarget, setResumeTarget] = useState<CandidateRow | null>(null);
 
   const {
@@ -187,16 +187,11 @@ export default function JobCandidatesPage() {
   );
 
   const visibleCandidates = useMemo(() => {
-    if (filter === "rejected") {
-      return candidates.filter((candidate) => candidate.status === "rejected");
+    if (filter === "all") return candidates;
+    if (filter === "active") {
+      return candidates.filter((candidate) => candidate.status !== "rejected");
     }
-
-    const withoutRejected = candidates.filter(
-      (candidate) => candidate.status !== "rejected",
-    );
-
-    if (filter === "active") return withoutRejected;
-    return withoutRejected.filter((candidate) => candidate.status === filter);
+    return candidates.filter((candidate) => candidate.status === filter);
   }, [candidates, filter]);
 
   const counts = useMemo(
@@ -517,6 +512,7 @@ export default function JobCandidatesPage() {
   }
 
   const filterOptions = [
+    { label: `All (${candidates.length})`, value: "all" },
     { label: `Active (${counts.active})`, value: "active" },
     {
       label: `Submitted (${candidates.filter((item) => item.status === "submitted").length})`,
@@ -664,9 +660,7 @@ export default function JobCandidatesPage() {
                 <p className="max-w-sm text-sm text-grayColor">
                   {isApplicationsError
                     ? "Something went wrong fetching applications. Try again in a moment."
-                    : filter === "rejected"
-                      ? "Rejected applications stay here until you delete them."
-                      : "Rejected candidates are hidden here — open the Rejected filter to review them."}
+                    : "Rejected applications stay on file until you delete them."}
                 </p>
               </div>
             ),
